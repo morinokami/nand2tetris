@@ -9,4 +9,39 @@
 // This program only needs to handle arguments that satisfy
 // R0 >= 0, R1 >= 0, and R0*R1 < 32768.
 
-// Put your code here.
+  // i = 1
+  @i
+  M=1
+  // product = 0
+  @product
+  M=0
+(LOOP)
+  // if (i > R1) goto STOP
+  @i
+  D=M
+  @R1
+  D=D-M
+  @STOP
+  D;JGT
+  // product = product + R0
+  @product
+  D=M
+  @R0
+  D=D+M
+  @product
+  M=D
+  // i = i + 1
+  @i
+  M=M+1
+  // goto LOOP
+  @LOOP
+  0;JMP
+(STOP)
+  // R2 = product
+  @product
+  D=M
+  @R2
+  M=D
+(END)
+  @END
+  0;JMP
