@@ -39,5 +39,51 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    // check the type of the instruction
+    Not(in=instruction[15], out=isA);
+    Not(in=isA, out=isC);
+
+
+    // use the ALU's output as the input?
+    And(a=isC, b=instruction[5], out=useALUOut);
+    // select the input for the A Register
+    Mux16(a=instruction, b=ALUOut, sel=useALUOut, out=ARegIn);
+    // load the input into the A register?
+    Or(a=isA, b=instruction[5], out=loadA);
+    // load the input into the A register if loadA
+    ARegister(in=ARegIn, load=loadA, out=ARegOut, out[0..14]=addressM);
+
+
+    // calculate the input to the ALU
+    Mux16(a=ARegOut, b=inM, sel=instruction[12], out=ALUIn);
+    // calculate the control bits to the ALU
+    And(a=isC, b=instruction[6], out=no); // c6
+    And(a=isC, b=instruction[7], out=f); // c5
+    And(a=isC, b=instruction[8], out=ny); // c4
+    And(a=isC, b=instruction[9], out=zy); // c3
+    And(a=isC, b=instruction[10], out=nx); // c2
+    And(a=isC, b=instruction[11], out=zx); // c1
+    // calculate the outputs using the ALU
+    ALU(x=DRegOut, y=ALUIn, zx=zx, nx=nx, zy=zy, ny=ny, f=f, no=no, out=ALUOut, out=outM, zr=zr, ng=ng);
+    // writeM?
+    And(a=isC, b=instruction[3], out=writeM);
+    // load the ALU's output into the D register?
+    And(a=isC, b=instruction[4], out=loadD);
+    // load the output into the D register if loadD
+    DRegister(in=ALUOut, load=loadD, out=DRegOut);
+
+
+    // check if the ALU's output is positive
+    Or(a=zr, b=ng, out=notPos);
+    Not(in=notPos, out=pos);
+    // calculate jump conditions
+    And(a=instruction[0], b=pos, out=j3Jump);
+    And(a=instruction[1], b=zr, out=j2Jump);
+    And(a=instruction[2], b=ng, out=j1Jump);
+    // jump?
+    Or(a=j1Jump, b=j2Jump, out=j12Jump);
+    Or(a=j12Jump, b=j3Jump, out=j123Jump);
+    And(a=isC, b=j123Jump, out=jump);
+    // fetch the next instruction
+    PC(in=ARegOut, load=jump, inc=true, reset=reset, out[0..14]=pc);
 }
