@@ -15,14 +15,36 @@ const filenameWithoutExtension = filename.substr(0, filename.lastIndexOf("."));
 const program = await Deno.readTextFile(filename);
 const parser = new Parser(program);
 
+// First pass: initialize the symbol table
+const symbolTable = new SymbolTable();
+while (parser.hasMoreLines()) {
+  const instructionType = parser.instructionType();
+  if (instructionType === Instruction.L) {
+    const symbol = parser.symbol();
+    symbolTable.addEntry(symbol, parser.lineNumber);
+    parser.lineNumber--;
+  }
+  parser.advance();
+}
+parser.reset();
+
+// Second pass: translate the program into Hack binary code
+let variableIndex = 16;
 const result: string[] = [];
 while (parser.hasMoreLines()) {
   const instructionType = parser.instructionType();
   if (instructionType === Instruction.A) {
-    result.push(toBinary(parser.symbol()));
-  } else if (instructionType === Instruction.L) {
-    // TODO: Implement this
-    console.log(parser.symbol());
+    let address = parser.symbol();
+    if (isNaN(parseInt(address))) {
+      // encountered a symbolic reference
+      const symbol = address;
+      if (!symbolTable.contains(symbol)) {
+        symbolTable.addEntry(symbol, variableIndex);
+        variableIndex++;
+      }
+      address = String(symbolTable.getAddress(symbol) as number);
+    }
+    result.push(toBinary(address));
   } else if (instructionType === Instruction.C) {
     const dest = parser.dest();
     const comp = parser.comp();

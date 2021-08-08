@@ -17,20 +17,30 @@ type ParsedCInstruction = {
 };
 
 class Parser {
-  current = 0;
+  currentLine = 0;
+  lineNumber = 0;
   instructions: string[];
   constructor(program: string) {
+    function removeComment(line: string): string {
+      return line.replace(/\/\/.*/, "");
+    }
     this.instructions = program
       .split("\n")
+      .map((line) => removeComment(line))
       .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith("//"));
+      .filter((line) => line.length > 0);
+  }
+
+  reset(): void {
+    this.currentLine = 0;
+    this.lineNumber = 0;
   }
 
   /**
    * Are there more lines in the input?
    */
   hasMoreLines(): boolean {
-    return this.current < this.instructions.length;
+    return this.currentLine < this.instructions.length;
   }
 
   /**
@@ -44,7 +54,8 @@ class Parser {
    * Initially there is no current instruction.
    */
   advance(): void {
-    this.current++;
+    this.currentLine++;
+    this.lineNumber++;
   }
 
   /**
@@ -57,7 +68,7 @@ class Parser {
    * L_INSTRUCTION for (xxx), where xxx is a symbol.
    */
   instructionType(): Instruction {
-    const instruction = this.instructions[this.current].trim();
+    const instruction = this.instructions[this.currentLine];
     if (instruction.startsWith("@")) {
       return Instruction.A;
     } else if (instruction.startsWith("(")) {
@@ -76,9 +87,9 @@ class Parser {
    */
   symbol(): string {
     if (this.instructionType() === Instruction.A) {
-      return this.instructions[this.current].trim().substring(1);
+      return this.instructions[this.currentLine].substring(1);
     } else if (this.instructionType() === Instruction.L) {
-      const instruction = this.instructions[this.current].trim();
+      const instruction = this.instructions[this.currentLine];
       return instruction.substring(1, instruction.length - 1);
     }
     return "";
@@ -91,7 +102,7 @@ class Parser {
    * Should be called only if instructionType is C_INSTRUCTION.
    */
   dest(): DestMnemonicType {
-    const instruction = this.instructions[this.current];
+    const instruction = this.instructions[this.currentLine];
     return this.parseCInstruction(instruction).dest;
   }
 
@@ -102,7 +113,7 @@ class Parser {
    * Should be called only if instructionType is C_INSTRUCTION.
    */
   comp(): CompMnemonicType {
-    const instruction = this.instructions[this.current];
+    const instruction = this.instructions[this.currentLine];
     return this.parseCInstruction(instruction).comp;
   }
 
@@ -113,7 +124,7 @@ class Parser {
    * Should be called only if instructionType is C_INSTRUCTION.
    */
   jump(): JumpMnemonicType {
-    const instruction = this.instructions[this.current];
+    const instruction = this.instructions[this.currentLine];
     return this.parseCInstruction(instruction).jump;
   }
 
