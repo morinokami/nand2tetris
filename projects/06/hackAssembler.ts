@@ -1,3 +1,5 @@
+import * as path from "https://deno.land/std@0.103.0/path/mod.ts";
+
 import * as Code from "./code.ts";
 import Parser, { Instruction } from "./parser.ts";
 import SymbolTable from "./symbolTable.ts";
@@ -11,7 +13,7 @@ function toBinary(value: string, length = 16): string {
 }
 
 const filename = Deno.args[0];
-const filenameWithoutExtension = filename.substr(0, filename.lastIndexOf("."));
+const filenameWithoutExtension = path.parse(filename).name;
 const program = await Deno.readTextFile(filename);
 const parser = new Parser(program);
 
