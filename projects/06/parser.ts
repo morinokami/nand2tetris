@@ -16,14 +16,15 @@ type ParsedCInstruction = {
   jump: JumpMnemonicType;
 };
 
+function removeComment(line: string): string {
+  return line.replace(/\/\/.*/, "");
+}
+
 class Parser {
   currentLine = 0;
   lineNumber = 0;
   instructions: string[];
   constructor(program: string) {
-    function removeComment(line: string): string {
-      return line.replace(/\/\/.*/, "");
-    }
     this.instructions = program
       .split("\n")
       .map((line) => removeComment(line))
