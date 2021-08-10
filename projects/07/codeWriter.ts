@@ -9,7 +9,28 @@ class CodeWriter {
    * Writes to the output file the assembly code that implements the given
    * arithmetic-logical command.
    */
-  writeArithmetic(command: string): void {}
+  writeArithmetic(command: string): void {
+    switch (command) {
+      case "add":
+        break;
+      case "sub":
+        break;
+      case "neg":
+        break;
+      case "eq":
+        break;
+      case "gt":
+        break;
+      case "lt":
+        break;
+      case "and":
+        break;
+      case "or":
+        break;
+      case "not":
+        break;
+    }
+  }
 
   /**
    * Writes to the output file the assembly code that implements the given
