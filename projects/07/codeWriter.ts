@@ -1,8 +1,14 @@
 import { Command } from "./parser.ts";
+
+const encoder = new TextEncoder();
 class CodeWriter {
   file: Deno.File;
   constructor(filenameWithoutExtension: string) {
-    this.file = Deno.openSync(`${filenameWithoutExtension}.asm`);
+    this.file = Deno.openSync(`${filenameWithoutExtension}.asm`, {
+      create: true,
+      write: true,
+      truncate: true,
+    });
   }
 
   /**
@@ -12,6 +18,8 @@ class CodeWriter {
   writeArithmetic(command: string): void {
     switch (command) {
       case "add":
+        // TODO: Implement this.
+        this.file.writeSync(encoder.encode(`${command}\n`));
         break;
       case "sub":
         break;
@@ -40,7 +48,10 @@ class CodeWriter {
     command: Command.C_PUSH | Command.C_POP,
     segment: string,
     index: number
-  ): void {}
+  ): void {
+    // TODO: Implement this.
+    this.file.writeSync(encoder.encode(`${command} ${segment} ${index}\n`));
+  }
 
   /**
    * Closes the output file / stream.

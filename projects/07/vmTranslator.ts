@@ -8,22 +8,26 @@ async function translate(filename: string): Promise<void> {
   const commands = await Deno.readTextFile(filename);
 
   const parser = new Parser(commands);
-  // const codeWriter = new CodeWriter(filenameWithoutExtension);
+  const codeWriter = new CodeWriter(filenameWithoutExtension);
 
   while (parser.hasMoreLines()) {
     const commandType = parser.commandType();
     if (commandType === Command.C_ARITHMETIC) {
-      // TODO: Call CodeWriter.writeArithmetic()
-      console.log("writeArithmetic");
-    } else if (
-      commandType === Command.C_PUSH ||
-      commandType === Command.C_POP
-    ) {
-      // TODO: Call CodeWriter.writePushPop()
-      console.log("writePushPop");
+      const command = parser.arg1();
+      codeWriter.writeArithmetic(command);
+    } else if (commandType === Command.C_PUSH) {
+      const segment = parser.arg1();
+      const index = parser.arg2();
+      codeWriter.writePushPop(Command.C_PUSH, segment, index);
+    } else if (commandType === Command.C_POP) {
+      const segment = parser.arg1();
+      const index = parser.arg2();
+      codeWriter.writePushPop(Command.C_POP, segment, index);
     }
     parser.advance();
   }
+
+  codeWriter.close();
 }
 
 const filename = Deno.args[0];
