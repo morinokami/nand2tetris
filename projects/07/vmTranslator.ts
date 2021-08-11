@@ -1,6 +1,6 @@
 import * as path from "https://deno.land/std@0.103.0/path/mod.ts";
 
-import CodeWriter from "./codeWriter.ts";
+import CodeWriter, { ArithmeticLogicalCommand, Segment } from "./codeWriter.ts";
 import Parser, { Command } from "./parser.ts";
 
 async function translate(filename: string): Promise<void> {
@@ -13,14 +13,14 @@ async function translate(filename: string): Promise<void> {
   while (parser.hasMoreLines()) {
     const commandType = parser.commandType();
     if (commandType === Command.C_ARITHMETIC) {
-      const command = parser.arg1();
+      const command = parser.arg1() as ArithmeticLogicalCommand;
       codeWriter.writeArithmetic(command);
     } else if (commandType === Command.C_PUSH) {
-      const segment = parser.arg1();
+      const segment = parser.arg1() as Segment;
       const index = parser.arg2();
       codeWriter.writePushPop(Command.C_PUSH, segment, index);
     } else if (commandType === Command.C_POP) {
-      const segment = parser.arg1();
+      const segment = parser.arg1() as Segment;
       const index = parser.arg2();
       codeWriter.writePushPop(Command.C_POP, segment, index);
     }

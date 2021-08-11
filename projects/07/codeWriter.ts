@@ -1,6 +1,28 @@
 import { Command } from "./parser.ts";
 
+export type ArithmeticLogicalCommand =
+  | "add"
+  | "sub"
+  | "neg"
+  | "eq"
+  | "gt"
+  | "lt"
+  | "and"
+  | "or"
+  | "not";
+
+export type Segment =
+  | "argument"
+  | "local"
+  | "static"
+  | "constant"
+  | "this"
+  | "that"
+  | "pointer"
+  | "temp";
+
 const encoder = new TextEncoder();
+
 class CodeWriter {
   file: Deno.File;
   constructor(filenameWithoutExtension: string) {
@@ -15,11 +37,20 @@ class CodeWriter {
    * Writes to the output file the assembly code that implements the given
    * arithmetic-logical command.
    */
-  writeArithmetic(command: string): void {
+  writeArithmetic(command: ArithmeticLogicalCommand): void {
     switch (command) {
       case "add":
-        // TODO: Implement this.
-        this.file.writeSync(encoder.encode(`${command}\n`));
+        this.writeLine("// add");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=D+*SP
+        this.writeLine("M=D+M");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "sub":
         break;
@@ -46,18 +77,54 @@ class CodeWriter {
    */
   writePushPop(
     command: Command.C_PUSH | Command.C_POP,
-    segment: string,
+    segment: Segment,
     index: number
   ): void {
-    // TODO: Implement this.
-    this.file.writeSync(encoder.encode(`${command} ${segment} ${index}\n`));
+    if (command === Command.C_PUSH) {
+      this.writePush(segment, index);
+    } else {
+      this.writePop(segment, index);
+    }
+  }
+
+  private writePush(segment: Segment, index: number): void {
+    switch (segment) {
+      case "constant":
+        this.writeLine(`// push ${segment} ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      default:
+        throw new Error(`push ${segment} not implemented`);
+    }
+  }
+
+  private writePop(segment: Segment, index: number): void {
+    throw new Error("writePop not implemented");
   }
 
   /**
    * Closes the output file / stream.
    */
   close(): void {
+    this.writeInfiniteLoop();
     Deno.close(this.file.rid);
+  }
+
+  private writeLine(line: string): void {
+    this.file.writeSync(encoder.encode(`${line}\n`));
+  }
+
+  private writeInfiniteLoop(): void {
+    this.writeLine("// infinite loop");
+    this.writeLine("(END)");
+    this.writeLine("@END");
+    this.writeLine("0;JMP");
   }
 }
 
