@@ -25,6 +25,7 @@ const encoder = new TextEncoder();
 
 class CodeWriter {
   file: Deno.File;
+  labelNumber = 0;
   constructor(filenameWithoutExtension: string) {
     this.file = Deno.openSync(`${filenameWithoutExtension}.asm`, {
       create: true,
@@ -75,10 +76,85 @@ class CodeWriter {
         this.writeLine("M=M+1");
         break;
       case "eq":
+        const eqLabel = this.getLabelNumber();
+        const neqLabel = this.getLabelNumber();
+        this.writeLine("// eq");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=*SP-D
+        this.writeLine("D=M-D");
+        this.writeLine(`@EQ${eqLabel}`); // if D=0 goto EQ
+        this.writeLine("D;JEQ");
+        this.writeLine("@SP"); // *SP=false
+        this.writeLine("A=M");
+        this.writeLine("M=0");
+        this.writeLine(`@NEQ${neqLabel}`); // goto NEQ
+        this.writeLine("0;JMP");
+        this.writeLine(`(EQ${eqLabel})`);
+        this.writeLine("@SP"); // *SP=true
+        this.writeLine("A=M");
+        this.writeLine("M=-1");
+        this.writeLine(`(NEQ${neqLabel})`);
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "gt":
+        const gtLabel = this.getLabelNumber();
+        const ngtLabel = this.getLabelNumber();
+        this.writeLine("// gt");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=*SP-D
+        this.writeLine("D=M-D");
+        this.writeLine(`@GT${gtLabel}`); // if D>0 goto GT
+        this.writeLine("D;JGT");
+        this.writeLine("@SP"); // *SP=false
+        this.writeLine("A=M");
+        this.writeLine("M=0");
+        this.writeLine(`@NGT${ngtLabel}`); // goto NGT
+        this.writeLine("0;JMP");
+        this.writeLine(`(GT${gtLabel})`);
+        this.writeLine("@SP"); // *SP=true
+        this.writeLine("A=M");
+        this.writeLine("M=-1");
+        this.writeLine(`(NGT${ngtLabel})`);
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "lt":
+        const ltLabel = this.getLabelNumber();
+        const nltLabel = this.getLabelNumber();
+        this.writeLine("// lt");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=*SP-D
+        this.writeLine("D=M-D");
+        this.writeLine(`@LT${ltLabel}`); // if D<0 goto LT
+        this.writeLine("D;JLT");
+        this.writeLine("@SP"); // *SP=false
+        this.writeLine("A=M");
+        this.writeLine("M=0");
+        this.writeLine(`@NLT${nltLabel}`); // goto NLT
+        this.writeLine("0;JMP");
+        this.writeLine(`(LT${ltLabel})`);
+        this.writeLine("@SP"); // *SP=true
+        this.writeLine("A=M");
+        this.writeLine("M=-1");
+        this.writeLine(`(NLT${nltLabel})`);
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "and":
         this.writeLine("// and");
@@ -161,6 +237,10 @@ class CodeWriter {
   close(): void {
     this.writeInfiniteLoop();
     Deno.close(this.file.rid);
+  }
+
+  private getLabelNumber(): number {
+    return this.labelNumber++;
   }
 
   private writeLine(line: string): void {
