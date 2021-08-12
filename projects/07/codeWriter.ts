@@ -81,10 +81,39 @@ class CodeWriter {
       case "lt":
         break;
       case "and":
+        this.writeLine("// and");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=D&*SP
+        this.writeLine("M=D&M");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "or":
+        this.writeLine("// or");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=D|*SP
+        this.writeLine("M=D|M");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "not":
+        this.writeLine("// not");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=!*SP
+        this.writeLine("M=!M");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
     }
   }
