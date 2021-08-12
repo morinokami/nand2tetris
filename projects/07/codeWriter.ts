@@ -53,8 +53,26 @@ class CodeWriter {
         this.writeLine("M=M+1");
         break;
       case "sub":
+        this.writeLine("// sub");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // D=*SP
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=*SP-D
+        this.writeLine("M=M-D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "neg":
+        this.writeLine("// neg");
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("A=M"); // *SP=-*SP
+        this.writeLine("M=-M");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
         break;
       case "eq":
         break;
