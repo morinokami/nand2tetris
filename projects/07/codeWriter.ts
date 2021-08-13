@@ -214,10 +214,13 @@ class CodeWriter {
 
   private writePush(segment: Segment, index: number): void {
     switch (segment) {
-      case "constant":
-        this.writeLine(`// push constant ${index}`);
+      case "argument":
+        this.writeLine(`// push argument ${index}`);
         this.writeLine(`@${index}`); // D=index
         this.writeLine("D=A");
+        this.writeLine("@ARG"); // D=*(D+*ARG)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
         this.writeLine("@SP"); // *SP=D
         this.writeLine("A=M");
         this.writeLine("M=D");
@@ -247,13 +250,10 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
-      case "argument":
-        this.writeLine(`// push argument ${index}`);
+      case "constant":
+        this.writeLine(`// push constant ${index}`);
         this.writeLine(`@${index}`); // D=index
         this.writeLine("D=A");
-        this.writeLine("@ARG"); // D=*(D+*ARG)
-        this.writeLine("A=D+M");
-        this.writeLine("D=M");
         this.writeLine("@SP"); // *SP=D
         this.writeLine("A=M");
         this.writeLine("M=D");
@@ -320,6 +320,23 @@ class CodeWriter {
 
   private writePop(segment: Segment, index: number): void {
     switch (segment) {
+      case "argument":
+        this.writeLine(`// pop argument ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@ARG"); // D=D+*ARG
+        this.writeLine("D=D+M");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
       case "local":
         this.writeLine(`// pop local ${index}`);
         this.writeLine("@SP"); // SP--
@@ -345,23 +362,6 @@ class CodeWriter {
         this.writeLine("A=M");
         this.writeLine("D=M");
         this.writeLine(`@${this.filenameWithExtension}.${index}`); // *(FileName.i)=D
-        this.writeLine("M=D");
-        break;
-      case "argument":
-        this.writeLine(`// pop argument ${index}`);
-        this.writeLine("@SP"); // SP--
-        this.writeLine("M=M-1");
-        this.writeLine(`@${index}`); // D=index
-        this.writeLine("D=A");
-        this.writeLine("@ARG"); // D=D+*ARG
-        this.writeLine("D=D+M");
-        this.writeLine("@R13"); // R13=D
-        this.writeLine("M=D");
-        this.writeLine("@SP"); // D=*SP
-        this.writeLine("A=M");
-        this.writeLine("D=M");
-        this.writeLine("@R13"); // *R13=D
-        this.writeLine("A=M");
         this.writeLine("M=D");
         break;
       case "this":
