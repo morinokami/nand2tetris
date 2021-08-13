@@ -213,9 +213,74 @@ class CodeWriter {
   private writePush(segment: Segment, index: number): void {
     switch (segment) {
       case "constant":
-        this.writeLine(`// push ${segment} ${index}`);
+        this.writeLine(`// push constant ${index}`);
         this.writeLine(`@${index}`); // D=index
         this.writeLine("D=A");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      case "local":
+        this.writeLine(`// push local ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@LCL"); // D=*(D+*LCL)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      case "argument":
+        this.writeLine(`// push argument ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@ARG"); // D=*(D+*ARG)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      case "this":
+        this.writeLine(`// push this ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@THIS"); // D=*(D+*THIS)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      case "that":
+        this.writeLine(`// push that ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@THAT"); // D=*(D+*THAT)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
+      case "temp":
+        this.writeLine(`// push temp ${index}`);
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@TEMP"); // D=*(D+*TEMP)
+        this.writeLine("A=D+M");
+        this.writeLine("D=M");
         this.writeLine("@SP"); // *SP=D
         this.writeLine("A=M");
         this.writeLine("M=D");
@@ -228,7 +293,95 @@ class CodeWriter {
   }
 
   private writePop(segment: Segment, index: number): void {
-    throw new Error("writePop not implemented");
+    switch (segment) {
+      case "local":
+        this.writeLine(`// pop local ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@LCL"); // D=D+*LCL
+        this.writeLine("D=D+M");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "argument":
+        this.writeLine(`// pop argument ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@ARG"); // D=D+*ARG
+        this.writeLine("D=D+M");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "this":
+        this.writeLine(`// pop this ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@THIS"); // D=D+*THIS
+        this.writeLine("D=D+M");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "that":
+        this.writeLine(`// pop that ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@THAT"); // D=D+*THAT
+        this.writeLine("D=D+M");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "temp":
+        this.writeLine(`// pop temp ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine(`@${index}`); // D=index
+        this.writeLine("D=A");
+        this.writeLine("@5"); // D=D+TEMP
+        this.writeLine("D=D+A");
+        this.writeLine("@R13"); // R13=D
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine("@R13"); // *R13=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      default:
+        throw new Error(`pop ${segment} not implemented`);
+    }
   }
 
   /**
