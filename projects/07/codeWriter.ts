@@ -25,13 +25,15 @@ const encoder = new TextEncoder();
 
 class CodeWriter {
   file: Deno.File;
+  filenameWithExtension: string;
   labelNumber = 0;
-  constructor(filename: string) {
-    this.file = Deno.openSync(filename, {
+  constructor(path: string, filenameWithExtension: string) {
+    this.file = Deno.openSync(path, {
       create: true,
       write: true,
       truncate: true,
     });
+    this.filenameWithExtension = filenameWithExtension;
   }
 
   /**
@@ -235,6 +237,16 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
+      case "static":
+        this.writeLine(`// push static ${index}`);
+        this.writeLine(`@${this.filenameWithExtension}.${index}`); // D=*(FileName.i)
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
       case "argument":
         this.writeLine(`// push argument ${index}`);
         this.writeLine(`@${index}`); // D=index
@@ -323,6 +335,16 @@ class CodeWriter {
         this.writeLine("D=M");
         this.writeLine("@R13"); // *R13=D
         this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "static":
+        this.writeLine(`// pop static ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        this.writeLine(`@${this.filenameWithExtension}.${index}`); // *(FileName.i)=D
         this.writeLine("M=D");
         break;
       case "argument":

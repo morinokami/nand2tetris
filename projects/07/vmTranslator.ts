@@ -6,10 +6,11 @@ import Parser, { Command } from "./parser.ts";
 async function translate(filename: string): Promise<void> {
   const commands = await Deno.readTextFile(filename);
   const parsedPath = path.parse(filename);
-  const out = `${parsedPath.dir}/${parsedPath.name}.asm`;
+  const filenameWithoutExtension = parsedPath.name;
+  const output = `${parsedPath.dir}/${filenameWithoutExtension}.asm`;
 
   const parser = new Parser(commands);
-  const codeWriter = new CodeWriter(out);
+  const codeWriter = new CodeWriter(output, filenameWithoutExtension);
 
   while (parser.hasMoreLines()) {
     const commandType = parser.commandType();
