@@ -26,8 +26,8 @@ const encoder = new TextEncoder();
 class CodeWriter {
   file: Deno.File;
   labelNumber = 0;
-  constructor(filenameWithoutExtension: string) {
-    this.file = Deno.openSync(`${filenameWithoutExtension}.asm`, {
+  constructor(filename: string) {
+    this.file = Deno.openSync(filename, {
       create: true,
       write: true,
       truncate: true,
