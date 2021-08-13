@@ -274,6 +274,20 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
+      case "pointer":
+        this.writeLine(`// push pointer ${index}`);
+        if (index === 0) {
+          this.writeLine(`@THIS`); // D=*THIS
+        } else {
+          this.writeLine(`@THAT`); // D=*THAT
+        }
+        this.writeLine("D=M");
+        this.writeLine("@SP"); // *SP=D
+        this.writeLine("A=M");
+        this.writeLine("M=D");
+        this.writeLine("@SP"); // SP++
+        this.writeLine("M=M+1");
+        break;
       case "temp":
         this.writeLine(`// push temp ${index}`);
         this.writeLine(`@${index}`); // D=index
@@ -360,6 +374,20 @@ class CodeWriter {
         this.writeLine("D=M");
         this.writeLine("@R13"); // *R13=D
         this.writeLine("A=M");
+        this.writeLine("M=D");
+        break;
+      case "pointer":
+        this.writeLine(`// pop pointer ${index}`);
+        this.writeLine("@SP"); // SP--
+        this.writeLine("M=M-1");
+        this.writeLine("@SP"); // D=*SP
+        this.writeLine("A=M");
+        this.writeLine("D=M");
+        if (index === 0) {
+          this.writeLine("@THIS"); // *THIS=D
+        } else {
+          this.writeLine(`@THAT`); // *THAT=D
+        }
         this.writeLine("M=D");
         break;
       case "temp":
