@@ -25,15 +25,22 @@ const encoder = new TextEncoder();
 
 class CodeWriter {
   file: Deno.File;
-  filenameWithExtension: string;
+  filename = "";
   labelNumber = 0;
-  constructor(path: string, filenameWithExtension: string) {
-    this.file = Deno.openSync(path, {
+  constructor(outputPath: string) {
+    this.file = Deno.openSync(outputPath, {
       create: true,
       write: true,
       truncate: true,
     });
-    this.filenameWithExtension = filenameWithExtension;
+  }
+
+  /**
+   * Informs that the translation of a new VM file has started (called by the
+   * VMTranslator).
+   */
+  setFileName(filename: string): void {
+    this.filename = filename;
   }
 
   /**
@@ -242,7 +249,7 @@ class CodeWriter {
         break;
       case "static":
         this.writeLine(`// push static ${index}`);
-        this.writeLine(`@${this.filenameWithExtension}.${index}`); // D=*(FileName.i)
+        this.writeLine(`@${this.filename}.${index}`); // D=*(FileName.i)
         this.writeLine("D=M");
         this.writeLine("@SP"); // *SP=D
         this.writeLine("A=M");
@@ -361,7 +368,7 @@ class CodeWriter {
         this.writeLine("@SP"); // D=*SP
         this.writeLine("A=M");
         this.writeLine("D=M");
-        this.writeLine(`@${this.filenameWithExtension}.${index}`); // *(FileName.i)=D
+        this.writeLine(`@${this.filename}.${index}`); // *(FileName.i)=D
         this.writeLine("M=D");
         break;
       case "this":
@@ -432,6 +439,33 @@ class CodeWriter {
       default:
         throw new Error(`pop ${segment} not implemented`);
     }
+  }
+
+  /**
+   * Writes assembly code that effects the label command.
+   */
+  writeLabel(label: string): void {
+    this.writeLine(`(${label})`); // (label)
+  }
+
+  /**
+   * Writes assembly code that effects the goto command.
+   */
+  writeGoto(label: string): void {
+    this.writeLine(`@${label}`); // goto label
+    this.writeLine("0;JMP");
+  }
+
+  /**
+   * Writes assembly code that effects the if-goto command.
+   */
+  writeIf(label: string): void {
+    this.writeLine("@SP"); // SP--
+    this.writeLine("M=M-1");
+    this.writeLine("A=M"); // D=*SP
+    this.writeLine("D=M");
+    this.writeLine(`@${label}`); // if D goto label
+    this.writeLine("D;JNE");
   }
 
   /**
