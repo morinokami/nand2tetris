@@ -25,6 +25,15 @@ async function translate(filename: string): Promise<void> {
       const segment = parser.arg1() as Segment;
       const index = parser.arg2();
       codeWriter.writePushPop(Command.C_POP, segment, index);
+    } else if (commandType === Command.C_LABEL) {
+      const label = parser.arg1();
+      codeWriter.writeLabel(label);
+    } else if (commandType === Command.C_GOTO) {
+      const label = parser.arg1();
+      codeWriter.writeGoto(label);
+    } else if (commandType === Command.C_IF) {
+      const label = parser.arg1();
+      codeWriter.writeIf(label);
     }
     parser.advance();
   }

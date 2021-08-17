@@ -72,6 +72,12 @@ class Parser {
       command.startsWith("not")
     ) {
       return Command.C_ARITHMETIC;
+    } else if (command.startsWith("label")) {
+      return Command.C_LABEL;
+    } else if (command.startsWith("goto")) {
+      return Command.C_GOTO;
+    } else if (command.startsWith("if-goto")) {
+      return Command.C_IF;
     } else {
       throw new Error("not implemented");
     }

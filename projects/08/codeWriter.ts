@@ -435,6 +435,33 @@ class CodeWriter {
   }
 
   /**
+   * Writes assembly code that effects the label command.
+   */
+  writeLabel(label: string): void {
+    this.writeLine(`(${label})`); // (label)
+  }
+
+  /**
+   * Writes assembly code that effects the goto command.
+   */
+  writeGoto(label: string): void {
+    this.writeLine(`@${label}`); // goto label
+    this.writeLine("0;JMP");
+  }
+
+  /**
+   * Writes assembly code that effects the if-goto command.
+   */
+  writeIf(label: string): void {
+    this.writeLine("@SP"); // SP--
+    this.writeLine("M=M-1");
+    this.writeLine("A=M"); // D=*SP
+    this.writeLine("D=M");
+    this.writeLine(`@${label}`); // if D==true goto label
+    this.writeLine("D;JNE");
+  }
+
+  /**
    * Closes the output file / stream.
    */
   close(): void {
