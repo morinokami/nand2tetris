@@ -472,11 +472,13 @@ class CodeWriter {
    * Writes assembly code that effects the function command.
    */
   writeFunction(functionName: string, nVars: number): void {
-    // TODO: Implement this.
-    // (f)
+    this.writeLine(`// function ${functionName} ${nVars}`);
+    this.writeLabel(functionName); // (f)
     // repeat nVars times:
     // push 0
-    throw new Error("writeFunction not implemented");
+    for (let i = 0; i < nVars; i++) {
+      this.writePush("constant", 0);
+    }
   }
 
   /**
@@ -500,17 +502,55 @@ class CodeWriter {
    * Writes assembly code that effects the return command.
    */
   writeReturn(): void {
-    // TODO: Implement this.
-    // frame = LCL
-    // retAddr = *(frame-5)
-    // *ARG = pop()
-    // SP = ARG+1
-    // THAT = *(frame-1)
-    // THIS = *(frame-2)
-    // ARG = *(frame-3)
-    // LCL = *(frame-4)
-    // goto retAddr
-    throw new Error("writeReturn not implemented");
+    this.writeLine("// return");
+    this.writeLine("@LCL"); // frame = LCL
+    this.writeLine("D=M");
+    this.writeLine("@frame");
+    this.writeLine("M=D");
+    this.writeLine("@5"); // retAddr = *(frame-5)
+    this.writeLine("A=D-A");
+    this.writeLine("D=M");
+    this.writeLine("@retAddr");
+    this.writeLine("M=D");
+    this.writeLine("@SP"); // *ARG = pop()
+    this.writeLine("A=M-1");
+    this.writeLine("D=M");
+    this.writeLine("@ARG");
+    this.writeLine("A=M");
+    this.writeLine("M=D");
+    this.writeLine("@ARG"); // SP = ARG+1
+    this.writeLine("D=M+1");
+    this.writeLine("@SP");
+    this.writeLine("M=D");
+    this.writeLine("@frame"); // THAT = *(frame-1)
+    this.writeLine("A=M-1");
+    this.writeLine("D=M");
+    this.writeLine("@THAT");
+    this.writeLine("M=D");
+    this.writeLine("@2"); // THIS = *(frame-2)
+    this.writeLine("D=A");
+    this.writeLine("@frame");
+    this.writeLine("A=M-D");
+    this.writeLine("D=M");
+    this.writeLine("@THIS");
+    this.writeLine("M=D");
+    this.writeLine("@3"); // ARG = *(frame-3)
+    this.writeLine("D=A");
+    this.writeLine("@frame");
+    this.writeLine("A=M-D");
+    this.writeLine("D=M");
+    this.writeLine("@ARG");
+    this.writeLine("M=D");
+    this.writeLine("@4"); // LCL = *(frame-4)
+    this.writeLine("D=A");
+    this.writeLine("@frame");
+    this.writeLine("A=M-D");
+    this.writeLine("D=M");
+    this.writeLine("@LCL");
+    this.writeLine("M=D");
+    this.writeLine("@retAddr"); // goto retAddr
+    this.writeLine("A=M");
+    this.writeLine("0;JMP");
   }
 
   /**
