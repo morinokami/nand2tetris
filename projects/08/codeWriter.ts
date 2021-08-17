@@ -469,6 +469,51 @@ class CodeWriter {
   }
 
   /**
+   * Writes assembly code that effects the function command.
+   */
+  writeFunction(functionName: string, nVars: number): void {
+    // TODO: Implement this.
+    // (f)
+    // repeat nVars times:
+    // push 0
+    throw new Error("writeFunction not implemented");
+  }
+
+  /**
+   * Writes assembly code that effects the call command.
+   */
+  writeCall(functionName: string, nArgs: number): void {
+    // TODO: Implement this.
+    // push returnAddress
+    // push LCL
+    // push ARG
+    // push THIS
+    // push THAT
+    // ARG=SP-5-nArgs
+    // LCL=SP
+    // goto f
+    // (returnAddress)
+    throw new Error("writeCall not implemented");
+  }
+
+  /**
+   * Writes assembly code that effects the return command.
+   */
+  writeReturn(): void {
+    // TODO: Implement this.
+    // frame = LCL
+    // retAddr = *(frame-5)
+    // *ARG = pop()
+    // SP = ARG+1
+    // THAT = *(frame-1)
+    // THIS = *(frame-2)
+    // ARG = *(frame-3)
+    // LCL = *(frame-4)
+    // goto retAddr
+    throw new Error("writeReturn not implemented");
+  }
+
+  /**
    * Closes the output file / stream.
    */
   close(): void {
