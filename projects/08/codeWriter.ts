@@ -23,6 +23,7 @@ export type Segment =
 
 const encoder = new TextEncoder();
 
+// TODO: BOOTSTRAP CODE!!
 class CodeWriter {
   file: Deno.File;
   filename = "";
@@ -33,6 +34,7 @@ class CodeWriter {
       write: true,
       truncate: true,
     });
+    this.writeInit();
   }
 
   /**
@@ -41,6 +43,15 @@ class CodeWriter {
    */
   setFileName(filename: string): void {
     this.filename = filename;
+  }
+
+  writeInit(): void {
+    this.writeLine("// Init");
+    this.writeLine("@256"); // SP=256
+    this.writeLine("D=A");
+    this.writeLine("@SP");
+    this.writeLine("M=D");
+    this.writeCall("Sys.init", 0); // call Sys.init
   }
 
   /**
@@ -485,17 +496,56 @@ class CodeWriter {
    * Writes assembly code that effects the call command.
    */
   writeCall(functionName: string, nArgs: number): void {
-    // TODO: Implement this.
-    // push returnAddress
-    // push LCL
-    // push ARG
-    // push THIS
-    // push THAT
-    // ARG=SP-5-nArgs
-    // LCL=SP
-    // goto f
-    // (returnAddress)
-    throw new Error("writeCall not implemented");
+    const returnAddressLabel = this.getLabelNumber();
+    this.writeLine(`// call ${functionName} ${nArgs}`);
+    this.writeLine(`@returnAddress${returnAddressLabel}`); // push returnAddress
+    this.writeLine(`D=A`);
+    this.writeLine(`@SP`);
+    this.writeLine(`A=M`);
+    this.writeLine(`M=D`);
+    this.writeLine(`@SP`);
+    this.writeLine(`M=M+1`);
+    this.writeLine(`@LCL`); // push LCL
+    this.writeLine(`D=M`);
+    this.writeLine(`@SP`);
+    this.writeLine(`A=M`);
+    this.writeLine(`M=D`);
+    this.writeLine(`@SP`);
+    this.writeLine(`M=M+1`);
+    this.writeLine(`@ARG`); // push ARG
+    this.writeLine(`D=M`);
+    this.writeLine(`@SP`);
+    this.writeLine(`A=M`);
+    this.writeLine(`M=D`);
+    this.writeLine(`@SP`);
+    this.writeLine(`M=M+1`);
+    this.writeLine(`@THIS`); // push THIS
+    this.writeLine(`D=M`);
+    this.writeLine(`@SP`);
+    this.writeLine(`A=M`);
+    this.writeLine(`M=D`);
+    this.writeLine(`@SP`);
+    this.writeLine(`M=M+1`);
+    this.writeLine(`@THAT`); // push THAT
+    this.writeLine(`D=M`);
+    this.writeLine(`@SP`);
+    this.writeLine(`A=M`);
+    this.writeLine(`M=D`);
+    this.writeLine(`@SP`);
+    this.writeLine(`M=M+1`);
+    this.writeLine(`@${5 + nArgs}`); // ARG=SP-5-nArgs
+    this.writeLine(`D=A`);
+    this.writeLine(`@SP`);
+    this.writeLine(`D=M-D`);
+    this.writeLine("@ARG");
+    this.writeLine(`M=D`);
+    this.writeLine("@SP"); // LCL=SP
+    this.writeLine("D=M");
+    this.writeLine("@LCL");
+    this.writeLine("M=D");
+    this.writeLine(`@${functionName}`); // goto f
+    this.writeLine("0;JMP");
+    this.writeLabel(`returnAddress${returnAddressLabel}`); // (returnAddress)
   }
 
   /**
