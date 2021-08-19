@@ -23,11 +23,27 @@ export type Segment =
 
 const encoder = new TextEncoder();
 
-// TODO: BOOTSTRAP CODE!!
+class LabelNumberManager {
+  private currentLabelNumber: number = 0;
+  private labelMap: Map<string, number> = new Map();
+
+  getNextNumber(functionName = ""): number {
+    if (functionName.length > 0 && this.labelMap.has(functionName)) {
+      return this.labelMap.get(functionName) as number;
+    }
+
+    const labelNumber = this.currentLabelNumber++;
+    if (functionName.length > 0) {
+      this.labelMap.set(functionName, labelNumber);
+    }
+    return labelNumber;
+  }
+}
+
 class CodeWriter {
   file: Deno.File;
   filename = "";
-  labelNumber = 0;
+  labelNumberManager = new LabelNumberManager();
   constructor(outputPath: string) {
     this.file = Deno.openSync(outputPath, {
       create: true,
@@ -96,8 +112,8 @@ class CodeWriter {
         this.writeLine("M=M+1");
         break;
       case "eq":
-        const eqLabel = this.getLabelNumber();
-        const neqLabel = this.getLabelNumber();
+        const eqLabelNumber = this.labelNumberManager.getNextNumber();
+        const neqLabelNumber = this.labelNumberManager.getNextNumber();
         this.writeLine("// eq");
         this.writeLine("@SP"); // SP--
         this.writeLine("M=M-1");
@@ -107,24 +123,24 @@ class CodeWriter {
         this.writeLine("M=M-1");
         this.writeLine("A=M"); // *SP=*SP-D
         this.writeLine("D=M-D");
-        this.writeLine(`@EQ${eqLabel}`); // if D=0 goto EQ
+        this.writeLine(`@EQ${eqLabelNumber}`); // if D=0 goto EQ
         this.writeLine("D;JEQ");
         this.writeLine("@SP"); // *SP=false
         this.writeLine("A=M");
         this.writeLine("M=0");
-        this.writeLine(`@NEQ${neqLabel}`); // goto NEQ
+        this.writeLine(`@NEQ${neqLabelNumber}`); // goto NEQ
         this.writeLine("0;JMP");
-        this.writeLine(`(EQ${eqLabel})`);
+        this.writeLine(`(EQ${eqLabelNumber})`);
         this.writeLine("@SP"); // *SP=true
         this.writeLine("A=M");
         this.writeLine("M=-1");
-        this.writeLine(`(NEQ${neqLabel})`);
+        this.writeLine(`(NEQ${neqLabelNumber})`);
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
       case "gt":
-        const gtLabel = this.getLabelNumber();
-        const ngtLabel = this.getLabelNumber();
+        const gtLabel = this.labelNumberManager.getNextNumber();
+        const ngtLabel = this.labelNumberManager.getNextNumber();
         this.writeLine("// gt");
         this.writeLine("@SP"); // SP--
         this.writeLine("M=M-1");
@@ -150,8 +166,8 @@ class CodeWriter {
         this.writeLine("M=M+1");
         break;
       case "lt":
-        const ltLabel = this.getLabelNumber();
-        const nltLabel = this.getLabelNumber();
+        const ltLabelNumber = this.labelNumberManager.getNextNumber();
+        const nltLabelNumber = this.labelNumberManager.getNextNumber();
         this.writeLine("// lt");
         this.writeLine("@SP"); // SP--
         this.writeLine("M=M-1");
@@ -161,18 +177,18 @@ class CodeWriter {
         this.writeLine("M=M-1");
         this.writeLine("A=M"); // *SP=*SP-D
         this.writeLine("D=M-D");
-        this.writeLine(`@LT${ltLabel}`); // if D<0 goto LT
+        this.writeLine(`@LT${ltLabelNumber}`); // if D<0 goto LT
         this.writeLine("D;JLT");
         this.writeLine("@SP"); // *SP=false
         this.writeLine("A=M");
         this.writeLine("M=0");
-        this.writeLine(`@NLT${nltLabel}`); // goto NLT
+        this.writeLine(`@NLT${nltLabelNumber}`); // goto NLT
         this.writeLine("0;JMP");
-        this.writeLine(`(LT${ltLabel})`);
+        this.writeLine(`(LT${ltLabelNumber})`);
         this.writeLine("@SP"); // *SP=true
         this.writeLine("A=M");
         this.writeLine("M=-1");
-        this.writeLine(`(NLT${nltLabel})`);
+        this.writeLine(`(NLT${nltLabelNumber})`);
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
@@ -483,8 +499,9 @@ class CodeWriter {
    * Writes assembly code that effects the function command.
    */
   writeFunction(functionName: string, nVars: number): void {
+    const labelNumber = this.labelNumberManager.getNextNumber(functionName);
     this.writeLine(`// function ${functionName} ${nVars}`);
-    this.writeLabel(functionName); // (f)
+    this.writeLabel(`${functionName}$${labelNumber}`); // (f)
     // repeat nVars times:
     // push 0
     for (let i = 0; i < nVars; i++) {
@@ -496,9 +513,11 @@ class CodeWriter {
    * Writes assembly code that effects the call command.
    */
   writeCall(functionName: string, nArgs: number): void {
-    const returnAddressLabel = this.getLabelNumber();
+    const functionLabelNumber =
+      this.labelNumberManager.getNextNumber(functionName);
+    const returnAddressLabelNumber = this.labelNumberManager.getNextNumber();
     this.writeLine(`// call ${functionName} ${nArgs}`);
-    this.writeLine(`@returnAddress${returnAddressLabel}`); // push returnAddress
+    this.writeLine(`@${functionName}$ret.${returnAddressLabelNumber}`); // push returnAddress
     this.writeLine(`D=A`);
     this.writeLine(`@SP`);
     this.writeLine(`A=M`);
@@ -543,9 +562,9 @@ class CodeWriter {
     this.writeLine("D=M");
     this.writeLine("@LCL");
     this.writeLine("M=D");
-    this.writeLine(`@${functionName}`); // goto f
+    this.writeLine(`@${functionName}$${functionLabelNumber}`); // goto f
     this.writeLine("0;JMP");
-    this.writeLabel(`returnAddress${returnAddressLabel}`); // (returnAddress)
+    this.writeLabel(`${functionName}$ret.${returnAddressLabelNumber}`); // (returnAddress)
   }
 
   /**
@@ -609,10 +628,6 @@ class CodeWriter {
   close(): void {
     this.writeInfiniteLoop();
     Deno.close(this.file.rid);
-  }
-
-  private getLabelNumber(): number {
-    return this.labelNumber++;
   }
 
   private writeLine(line: string): void {
