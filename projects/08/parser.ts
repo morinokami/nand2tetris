@@ -22,8 +22,8 @@ function removeComment(line: string): string {
 class Parser {
   currentLine = 0;
   commands: string[];
-  constructor(commands: string) {
-    this.commands = commands
+  constructor(vmSource: string) {
+    this.commands = vmSource
       .split("\n")
       .map((line) => removeComment(line))
       .map((line) => line.trim())
@@ -78,6 +78,12 @@ class Parser {
       return Command.C_GOTO;
     } else if (command.startsWith("if-goto")) {
       return Command.C_IF;
+    } else if (command.startsWith("function")) {
+      return Command.C_FUNCTION;
+    } else if (command.startsWith("call")) {
+      return Command.C_CALL;
+    } else if (command.startsWith("return")) {
+      return Command.C_RETURN;
     } else {
       throw new Error("not implemented");
     }

@@ -53,6 +53,16 @@ async function translate(inputPath: string): Promise<void> {
       } else if (commandType === Command.C_IF) {
         const label = parser.arg1();
         codeWriter.writeIf(label);
+      } else if (commandType === Command.C_FUNCTION) {
+        const functionName = parser.arg1();
+        const nVars = parser.arg2();
+        codeWriter.writeFunction(functionName, nVars);
+      } else if (commandType === Command.C_CALL) {
+        const functionName = parser.arg1();
+        const nArgs = parser.arg2();
+        codeWriter.writeCall(functionName, nArgs);
+      } else if (commandType === Command.C_RETURN) {
+        codeWriter.writeReturn();
       }
       parser.advance();
     }
