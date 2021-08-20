@@ -24,7 +24,7 @@ export type Segment =
 const encoder = new TextEncoder();
 
 class LabelNumberManager {
-  private currentLabelNumber: number = 0;
+  private currentLabelNumber = 0;
   private labelMap: Map<string, number> = new Map();
 
   getNextNumber(functionName = ""): number {
@@ -111,7 +111,7 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
-      case "eq":
+      case "eq": {
         const eqLabelNumber = this.labelNumberManager.getNextNumber();
         const neqLabelNumber = this.labelNumberManager.getNextNumber();
         this.writeLine("// eq");
@@ -138,7 +138,8 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
-      case "gt":
+      }
+      case "gt": {
         const gtLabel = this.labelNumberManager.getNextNumber();
         const ngtLabel = this.labelNumberManager.getNextNumber();
         this.writeLine("// gt");
@@ -165,7 +166,8 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
-      case "lt":
+      }
+      case "lt": {
         const ltLabelNumber = this.labelNumberManager.getNextNumber();
         const nltLabelNumber = this.labelNumberManager.getNextNumber();
         this.writeLine("// lt");
@@ -192,6 +194,7 @@ class CodeWriter {
         this.writeLine("@SP"); // SP++
         this.writeLine("M=M+1");
         break;
+      }
       case "and":
         this.writeLine("// and");
         this.writeLine("@SP"); // SP--
