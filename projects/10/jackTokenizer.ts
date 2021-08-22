@@ -1,58 +1,15 @@
-export enum TokenKindType {
-  KEYWORD,
-  SYMBOL,
-  IDENTIFIER,
-  INT_CONST,
-  STRING_CONST,
-}
-
-const Keywords = [
-  "class",
-  "method",
-  "function",
-  "constructor",
-  "int",
-  "boolean",
-  "char",
-  "void",
-  "var",
-  "static",
-  "field",
-  "let",
-  "do",
-  "if",
-  "else",
-  "while",
-  "return",
-  "true",
-  "false",
-  "null",
-  "this",
-] as const;
-const Symbols = [
-  "{",
-  "}",
-  "(",
-  ")",
-  "[",
-  "]",
-  ".",
-  ",",
-  ";",
-  "+",
-  "-",
-  "*",
-  "/",
-  "&",
-  "|",
-  "<",
-  ">",
-  "=",
-  "~",
-] as const;
-
-type KeywordType = typeof Keywords[number];
-type SymbolType = typeof Symbols[number];
+import {
+  TokenKindKeyword,
+  TokenKindSymbol,
+  TokenKindIdentifier,
+  TokenKindIntegerConstant,
+  TokenKindStringConstant,
+  TokenKindType,
+  Keywords,
+  KeywordType,
+  Symbols,
+  SymbolType,
+} from "./types.ts";
 
 class JackTokenizer {
   private source: string;
@@ -170,15 +127,15 @@ class JackTokenizer {
    */
   tokenType(): TokenKindType {
     if ((Keywords as unknown as string[]).includes(this.token)) {
-      return TokenKindType.KEYWORD;
+      return TokenKindKeyword;
     } else if ((Symbols as unknown as string[]).indexOf(this.token) !== -1) {
-      return TokenKindType.SYMBOL;
+      return TokenKindSymbol;
     } else if (this.token.match(/^[0-9]+$/)) {
-      return TokenKindType.INT_CONST;
+      return TokenKindIntegerConstant;
     } else if (this.token.match(/^"[^"]*"$/)) {
-      return TokenKindType.STRING_CONST;
+      return TokenKindStringConstant;
     } else {
-      return TokenKindType.IDENTIFIER;
+      return TokenKindIdentifier;
     }
   }
 

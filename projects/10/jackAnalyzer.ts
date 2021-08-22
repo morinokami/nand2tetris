@@ -1,7 +1,15 @@
 import * as path from "https://deno.land/std@0.103.0/path/mod.ts";
 
-import CompilationEngine, { TokenType } from "./compilationEngine.ts";
-import JackTokenizer, { TokenKindType } from "./jackTokenizer.ts";
+import CompilationEngine from "./compilationEngine.ts";
+import JackTokenizer from "./jackTokenizer.ts";
+import {
+  TokenType,
+  TokenKindKeyword,
+  TokenKindSymbol,
+  TokenKindIdentifier,
+  TokenKindIntegerConstant,
+  TokenKindStringConstant,
+} from "./types.ts";
 
 const encoder = new TextEncoder();
 
@@ -45,10 +53,10 @@ async function analyze(inputPath?: string) {
 
       const tokenType = tokenizer.tokenType();
       switch (tokenType) {
-        case TokenKindType.KEYWORD:
+        case TokenKindKeyword:
           tokens.push({ kind: "keyword", value: tokenizer.keyword() });
           break;
-        case TokenKindType.SYMBOL: {
+        case TokenKindSymbol: {
           let symbol = "";
           switch (tokenizer.symbol()) {
             case "<":
@@ -67,16 +75,16 @@ async function analyze(inputPath?: string) {
           tokens.push({ kind: "symbol", value: symbol });
           break;
         }
-        case TokenKindType.IDENTIFIER:
+        case TokenKindIdentifier:
           tokens.push({ kind: "identifier", value: tokenizer.identifier() });
           break;
-        case TokenKindType.INT_CONST:
+        case TokenKindIntegerConstant:
           tokens.push({
             kind: "integerConstant",
             value: String(tokenizer.intVal()),
           });
           break;
-        case TokenKindType.STRING_CONST:
+        case TokenKindStringConstant:
           tokens.push({ kind: "stringConstant", value: tokenizer.stringVal() });
           break;
         default:
@@ -85,7 +93,12 @@ async function analyze(inputPath?: string) {
     }
 
     // TODO: Parse
+    // @ts-ignore
+    const writer = { write: (str: string): Promise<void> => console.log(str) };
+    const parser = new CompilationEngine(tokens, writer);
+    parser.compileClass();
 
+    // TODO: Delete this
     // Write output
     const file = await Deno.open(outputPath, {
       create: true,
