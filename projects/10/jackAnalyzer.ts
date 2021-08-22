@@ -1,6 +1,7 @@
 import * as path from "https://deno.land/std@0.103.0/path/mod.ts";
 
-import JackTokenizer, { TokenType } from "./jackTokenizer.ts";
+import CompilationEngine, { TokenType } from "./compilationEngine.ts";
+import JackTokenizer, { TokenKindType } from "./jackTokenizer.ts";
 
 const encoder = new TextEncoder();
 
@@ -32,7 +33,7 @@ async function analyze(inputPath?: string) {
 
   for (const jackFile of jackFiles) {
     const outputPath = path.join(outputDir, `${jackFile.name}T.xml`);
-    const tokens: { kind: string; value: string }[] = [];
+    const tokens: TokenType[] = [];
     const source = await Deno.readTextFile(
       path.join(jackFile.dir, `${jackFile.name}.jack`)
     );
@@ -44,10 +45,10 @@ async function analyze(inputPath?: string) {
 
       const tokenType = tokenizer.tokenType();
       switch (tokenType) {
-        case TokenType.KEYWORD:
+        case TokenKindType.KEYWORD:
           tokens.push({ kind: "keyword", value: tokenizer.keyword() });
           break;
-        case TokenType.SYMBOL: {
+        case TokenKindType.SYMBOL: {
           let symbol = "";
           switch (tokenizer.symbol()) {
             case "<":
@@ -66,16 +67,16 @@ async function analyze(inputPath?: string) {
           tokens.push({ kind: "symbol", value: symbol });
           break;
         }
-        case TokenType.IDENTIFIER:
+        case TokenKindType.IDENTIFIER:
           tokens.push({ kind: "identifier", value: tokenizer.identifier() });
           break;
-        case TokenType.INT_CONST:
+        case TokenKindType.INT_CONST:
           tokens.push({
             kind: "integerConstant",
             value: String(tokenizer.intVal()),
           });
           break;
-        case TokenType.STRING_CONST:
+        case TokenKindType.STRING_CONST:
           tokens.push({ kind: "stringConstant", value: tokenizer.stringVal() });
           break;
         default:

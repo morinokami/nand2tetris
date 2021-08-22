@@ -1,4 +1,4 @@
-export enum TokenType {
+export enum TokenKindType {
   KEYWORD,
   SYMBOL,
   IDENTIFIER,
@@ -168,17 +168,17 @@ class JackTokenizer {
   /**
    * Returns the type of the current token, as a constant.
    */
-  tokenType(): TokenType {
+  tokenType(): TokenKindType {
     if ((Keywords as unknown as string[]).includes(this.token)) {
-      return TokenType.KEYWORD;
+      return TokenKindType.KEYWORD;
     } else if ((Symbols as unknown as string[]).indexOf(this.token) !== -1) {
-      return TokenType.SYMBOL;
+      return TokenKindType.SYMBOL;
     } else if (this.token.match(/^[0-9]+$/)) {
-      return TokenType.INT_CONST;
+      return TokenKindType.INT_CONST;
     } else if (this.token.match(/^"[^"]*"$/)) {
-      return TokenType.STRING_CONST;
+      return TokenKindType.STRING_CONST;
     } else {
-      return TokenType.IDENTIFIER;
+      return TokenKindType.IDENTIFIER;
     }
   }
 

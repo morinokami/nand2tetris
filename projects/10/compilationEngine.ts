@@ -1,5 +1,13 @@
+export type TokenType = {
+  kind: string;
+  value: string;
+};
+
 class CompilationEngine {
-  constructor() {}
+  tokens: TokenType[];
+  constructor(tokens: TokenType[]) {
+    this.tokens = tokens;
+  }
 
   /**
    * Compiles a complete class.
