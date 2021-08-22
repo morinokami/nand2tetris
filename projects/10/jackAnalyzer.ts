@@ -4,14 +4,6 @@ import JackTokenizer, { TokenType } from "./jackTokenizer.ts";
 
 const encoder = new TextEncoder();
 
-async function writeLine(
-  file: Deno.File,
-  tag: string,
-  value: string
-): Promise<void> {
-  await file.write(encoder.encode(`<${tag}> ${value} </${tag}>\n`));
-}
-
 async function analyze(inputPath?: string) {
   let outputDir = "";
   const jackFiles: path.ParsedPath[] = [];
@@ -40,25 +32,20 @@ async function analyze(inputPath?: string) {
 
   for (const jackFile of jackFiles) {
     const outputPath = path.join(outputDir, `${jackFile.name}T.xml`);
-    const result = await Deno.open(outputPath, {
-      create: true,
-      write: true,
-      truncate: true,
-    });
-
+    const tokens: { kind: string; value: string }[] = [];
     const source = await Deno.readTextFile(
       path.join(jackFile.dir, `${jackFile.name}.jack`)
     );
-    const tokenizer = new JackTokenizer(source);
 
-    await result.write(encoder.encode("<tokens>\n"));
+    // Tokenize
+    const tokenizer = new JackTokenizer(source);
     while (tokenizer.hasMoreTokens()) {
       tokenizer.advance();
 
       const tokenType = tokenizer.tokenType();
       switch (tokenType) {
         case TokenType.KEYWORD:
-          await writeLine(result, "keyword", tokenizer.keyword());
+          tokens.push({ kind: "keyword", value: tokenizer.keyword() });
           break;
         case TokenType.SYMBOL: {
           let symbol = "";
@@ -76,25 +63,42 @@ async function analyze(inputPath?: string) {
               symbol = tokenizer.symbol();
               break;
           }
-          writeLine(result, "symbol", symbol);
+          tokens.push({ kind: "symbol", value: symbol });
           break;
         }
         case TokenType.IDENTIFIER:
-          writeLine(result, "identifier", tokenizer.identifier());
+          tokens.push({ kind: "identifier", value: tokenizer.identifier() });
           break;
         case TokenType.INT_CONST:
-          writeLine(result, "integerConstant", String(tokenizer.intVal()));
+          tokens.push({
+            kind: "integerConstant",
+            value: String(tokenizer.intVal()),
+          });
           break;
         case TokenType.STRING_CONST:
-          writeLine(result, "stringConstant", tokenizer.stringVal());
+          tokens.push({ kind: "stringConstant", value: tokenizer.stringVal() });
           break;
         default:
           throw new Error(`Unexpected token type: ${tokenType}`);
       }
     }
-    await result.write(encoder.encode("</tokens>\n"));
 
-    result.close();
+    // TODO: Parse
+
+    // Write output
+    const file = await Deno.open(outputPath, {
+      create: true,
+      write: true,
+      truncate: true,
+    });
+    await file.write(encoder.encode("<tokens>\n"));
+    for (const token of tokens) {
+      await file.write(
+        encoder.encode(`<${token.kind}> ${token.value} </${token.kind}>\n`)
+      );
+    }
+    await file.write(encoder.encode("</tokens>\n"));
+    file.close();
   }
 }
 
