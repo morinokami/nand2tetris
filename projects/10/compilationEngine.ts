@@ -240,8 +240,18 @@ class CompilationEngine {
   /**
    * Compiles a while statement.
    */
-  compileWhile(): void {
-    throw new Error("Not implemented");
+  async compileWhile(): Promise<void> {
+    this.write("<whileStatement>");
+    this.depth += 1;
+    this.eat("while");
+    this.eat("(");
+    await this.compileExpression();
+    this.eat(")");
+    this.eat("{");
+    await this.compileStatements();
+    this.eat("}");
+    this.depth -= 1;
+    this.write("</whileStatement>");
   }
 
   /**
