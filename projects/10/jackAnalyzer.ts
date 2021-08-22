@@ -96,7 +96,7 @@ async function analyze(inputPath?: string) {
     // @ts-ignore
     const writer = { write: (str: string): Promise<void> => console.log(str) };
     const parser = new CompilationEngine(tokens, writer);
-    parser.compileClass();
+    await parser.compileClass();
 
     // TODO: Delete this
     // Write output
