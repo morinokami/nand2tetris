@@ -20,6 +20,9 @@ class JackTokenizer {
   constructor(source: string) {
     this.source = source;
     this.skipWhiteSpace();
+    if (this.ch.length === 0) {
+      this.readChar();
+    }
   }
 
   private skipWhiteSpace(): void {
@@ -91,7 +94,7 @@ class JackTokenizer {
    * Are there more tokens in the input?
    */
   hasMoreTokens(): boolean {
-    return this.readPosition < this.source.length;
+    return this.readPosition <= this.source.length;
   }
 
   /**
