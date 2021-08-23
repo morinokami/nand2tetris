@@ -38,6 +38,7 @@ export const Keywords = [
   "null",
   "this",
 ] as const;
+
 export const Symbols = [
   "{",
   "}",
@@ -61,3 +62,15 @@ export const Symbols = [
 ] as const;
 export type KeywordType = typeof Keywords[number];
 export type SymbolType = typeof Symbols[number];
+
+export const Operators = [
+  "+",
+  "-",
+  "*",
+  "/",
+  "&amp;",
+  "|",
+  "&lt;",
+  "&gt;",
+  "=",
+];

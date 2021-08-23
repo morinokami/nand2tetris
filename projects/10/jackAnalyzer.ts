@@ -40,7 +40,6 @@ async function analyze(inputPath?: string) {
   }
 
   for (const jackFile of jackFiles) {
-    const outputPath = path.join(outputDir, `${jackFile.name}T.xml`);
     const tokens: TokenType[] = [];
     const source = await Deno.readTextFile(
       path.join(jackFile.dir, `${jackFile.name}.jack`)
@@ -92,27 +91,24 @@ async function analyze(inputPath?: string) {
       }
     }
 
-    // TODO: Parse
-    // @ts-ignore
-    const writer = { write: (str: string): Promise<void> => console.log(str) };
-    const parser = new CompilationEngine(tokens, writer);
-    await parser.compileClass();
-
-    // TODO: Delete this
-    // Write output
+    // Parse
+    const outputPath = path.join(outputDir, `${jackFile.name}.xml`);
     const file = await Deno.open(outputPath, {
       create: true,
       write: true,
       truncate: true,
     });
-    await file.write(encoder.encode("<tokens>\n"));
-    for (const token of tokens) {
-      await file.write(
-        encoder.encode(`<${token.kind}> ${token.value} </${token.kind}>\n`)
-      );
+    const writer = {
+      write: async (str: string): Promise<void> => {
+        await file.write(encoder.encode(str));
+      },
+    };
+    const parser = new CompilationEngine(tokens, writer);
+    try {
+      await parser.compileClass();
+    } finally {
+      file.close();
     }
-    await file.write(encoder.encode("</tokens>\n"));
-    file.close();
   }
 }
 

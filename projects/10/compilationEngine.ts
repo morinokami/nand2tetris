@@ -1,4 +1,4 @@
-import { TokenType } from "./types.ts";
+import { Operators, TokenType } from "./types.ts";
 
 export type Writer = {
   write(text: string): Promise<void>;
@@ -31,11 +31,11 @@ class CompilationEngine {
   }
 
   private async write(text: string): Promise<void> {
-    await this.writer.write(`${" ".repeat(this.depth * 2)}${text}`);
+    await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
   }
 
-  private peekToken(): TokenType {
-    return this.tokens[0];
+  private peekToken(i = 0): TokenType {
+    return this.tokens[i];
   }
 
   /**
@@ -206,7 +206,11 @@ class CompilationEngine {
     this.depth += 1;
     this.eat("let");
     this.eat("identifier");
-    // TODO: handle array
+    if (this.peekToken().value === "[") {
+      this.eat("[");
+      await this.compileExpression();
+      this.eat("]");
+    }
     this.eat("=");
     await this.compileExpression();
     this.eat(";");
@@ -296,7 +300,10 @@ class CompilationEngine {
     this.write("<expression>");
     this.depth += 1;
     await this.compileTerm();
-    // TODO: handle (op term)*
+    while (Operators.includes(this.peekToken().value)) {
+      this.eat(this.peekToken().value);
+      await this.compileTerm();
+    }
     this.depth -= 1;
     this.write("</expression>");
   }
@@ -311,7 +318,36 @@ class CompilationEngine {
   async compileTerm(): Promise<void> {
     this.write("<term>");
     this.depth += 1;
-    this.eat(this.peekToken().value); // TODO
+    if (this.peekToken().value === "(") {
+      // (expression)
+      this.eat("(");
+      await this.compileExpression();
+      this.eat(")");
+    } else if (
+      this.peekToken().value === "-" ||
+      this.peekToken().value === "~"
+    ) {
+      // unaryOp term
+      this.eat(this.peekToken().value);
+      await this.compileTerm();
+    } else {
+      this.eat(this.peekToken().value);
+      if (this.peekToken().value === "[") {
+        this.eat("[");
+        await this.compileExpression();
+        this.eat("]");
+      } else if (this.peekToken().value === "(") {
+        this.eat("(");
+        await this.compileExpressionList();
+        this.eat(")");
+      } else if (this.peekToken().value === ".") {
+        this.eat(".");
+        this.eat("identifier");
+        this.eat("(");
+        await this.compileExpressionList();
+        this.eat(")");
+      }
+    }
     this.depth -= 1;
     this.write("</term>");
   }
