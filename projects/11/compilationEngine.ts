@@ -1,32 +1,66 @@
-import { Operators, TokenType, WriteCloser } from "./types.ts";
-import VMWriter from "./vmWriter.ts";
+import SymbolTable, {
+  SymbolKindArg,
+  SymbolKindStatic,
+  SymbolKindType,
+  SymbolKindVar,
+} from "./symbolTable.ts";
+import {
+  Operators,
+  TokenKindIdentifier,
+  TokenKindIntegerConstant,
+  TokenKindStringConstant,
+  TokenType,
+} from "./types.ts";
+import VMWriter, {
+  ConstantSegment,
+  ArgumentSegment,
+  LocalSegment,
+  StaticSegment,
+  ThisSegment,
+  ThatSegment,
+  PointerSegment,
+  TempSegment,
+  AddCommand,
+  SubCommand,
+  NegCommand,
+  EqCommand,
+  GtCommand,
+  LtCommand,
+  AndCommand,
+  OrCommand,
+  NotCommand,
+} from "./vmWriter.ts";
 
 class CompilationEngine {
+  className = "";
   tokens: TokenType[];
   writer: VMWriter;
-  depth = 0;
+  classSymbolTable = new SymbolTable();
+  subrutineSymbolTable = new SymbolTable();
+  depth = 0; // TODO: Delete this
   constructor(tokens: TokenType[], writer: VMWriter) {
     this.tokens = tokens;
     this.writer = writer;
   }
 
-  private eat(tokenVal: string): void {
+  private eat(tokenVal: string): string {
     const currentToken = this.tokens.shift();
     if (
-      currentToken?.value === tokenVal ||
-      // identifier
-      (tokenVal === "identifier" && currentToken?.kind === tokenVal)
+      !(
+        currentToken?.value === tokenVal ||
+        // identifier
+        // TODO: DELETE?
+        (tokenVal === "identifier" && currentToken?.kind === tokenVal)
+      )
     ) {
-      this.write(
-        `<${currentToken.kind}> ${currentToken.value} </${currentToken.kind}>`
-      );
-    } else {
       throw new Error(
         `Parser error at line ${currentToken?.position.line}: exptected=\`${tokenVal}\`, got=\`${currentToken?.value}\``
       );
     }
+    return currentToken.value;
   }
 
+  // TODO: Delete this
   private async write(text: string): Promise<void> {
     // await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
     console.log(`${" ".repeat(this.depth * 2)}${text}`);
@@ -43,7 +77,7 @@ class CompilationEngine {
     await this.write("<class>");
     this.depth += 1;
     this.eat("class");
-    this.eat("identifier");
+    this.className = this.eat(this.peekToken().value);
     this.eat("{");
     while (
       this.peekToken().value === "static" ||
@@ -69,15 +103,18 @@ class CompilationEngine {
   async compileClassVarDec(): Promise<void> {
     await this.write("<classVarDec>");
     this.depth += 1;
-    this.eat(this.peekToken().value); // static or field
-    this.eat(this.peekToken().value); // type
-    this.eat("identifier");
+    const kind = this.eat(this.peekToken().value); // static or field
+    const type = this.eat(this.peekToken().value); // type
+    const name = this.eat(this.peekToken().value);
+    this.classSymbolTable.define(name, type, kind as SymbolKindType);
     while (this.peekToken().value === ",") {
       this.eat(",");
-      this.eat("identifier");
+      const name = this.eat(this.peekToken().value);
+      this.classSymbolTable.define(name, type, kind as SymbolKindType);
     }
     this.eat(";");
     this.depth -= 1;
+    await this.write(JSON.stringify(this.classSymbolTable)); // TODO: Delete this
     await this.write("</classVarDec>");
   }
 
@@ -85,6 +122,7 @@ class CompilationEngine {
    * Compiles a complete method, function, or constructor.
    */
   async compileSubroutine(): Promise<void> {
+    this.subrutineSymbolTable.reset();
     await this.write("<subroutineDec>");
     this.depth += 1;
     this.eat(this.peekToken().value); // constructor or function or method
@@ -95,6 +133,7 @@ class CompilationEngine {
     this.eat(")");
     await this.compileSubroutineBody();
     this.depth -= 1;
+    await this.write(JSON.stringify(this.subrutineSymbolTable)); // TODO: Delete this
     await this.write("</subroutineDec>");
   }
 
@@ -103,23 +142,18 @@ class CompilationEngine {
    * parentheses tokens ( and ).
    */
   async compileParameterList(): Promise<void> {
+    this.subrutineSymbolTable.define("this", this.className, SymbolKindArg);
     await this.write("<parameterList>");
     this.depth += 1;
     if (this.peekToken().value !== ")") {
-      if (this.peekToken().kind === "identifier") {
-        this.eat("identifier");
-      } else {
-        this.eat(this.peekToken().value); // int or char or boolean
-      }
-      this.eat("identifier");
+      const type = this.eat(this.peekToken().value);
+      const name = this.eat(this.peekToken().value);
+      this.subrutineSymbolTable.define(name, type, SymbolKindArg);
       while (this.peekToken().value === ",") {
         this.eat(",");
-        if (this.peekToken().kind === "identifier") {
-          this.eat("identifier");
-        } else {
-          this.eat(this.peekToken().value); // int or char or boolean
-        }
-        this.eat("identifier");
+        const type = this.eat(this.peekToken().value);
+        const name = this.eat(this.peekToken().value);
+        this.subrutineSymbolTable.define(name, type, SymbolKindArg);
       }
     }
     this.depth -= 1;
@@ -149,15 +183,13 @@ class CompilationEngine {
     await this.write("<varDec>");
     this.depth += 1;
     this.eat("var");
-    if (this.peekToken().kind === "identifier") {
-      this.eat("identifier");
-    } else {
-      this.eat(this.peekToken().value); // int or char or boolean
-    }
-    this.eat("identifier");
+    const type = this.eat(this.peekToken().value);
+    const name = this.eat(this.peekToken().value);
+    this.subrutineSymbolTable.define(name, type, SymbolKindVar);
     while (this.peekToken().value === ",") {
       this.eat(",");
-      this.eat("identifier");
+      const name = this.eat(this.peekToken().value);
+      this.subrutineSymbolTable.define(name, type, SymbolKindVar);
     }
     this.eat(";");
     this.depth -= 1;
@@ -299,15 +331,42 @@ class CompilationEngine {
    * Compiles an expression.
    */
   async compileExpression(): Promise<void> {
-    this.write("<expression>");
-    this.depth += 1;
     await this.compileTerm();
     while (Operators.includes(this.peekToken().value)) {
-      this.eat(this.peekToken().value);
+      const operator = this.eat(this.peekToken().value);
       await this.compileTerm();
+      switch (operator) {
+        case "+":
+          await this.writer.writeArithmetic(AddCommand);
+          break;
+        case "-":
+          await this.writer.writeArithmetic(SubCommand);
+          break;
+        case "*":
+          await this.writer.writeCall("Math.multiply", 2);
+          break;
+        case "/":
+          await this.writer.writeCall("Math.divide", 2);
+          break;
+        case "&":
+          await this.writer.writeArithmetic(AndCommand);
+          break;
+        case "|":
+          await this.writer.writeArithmetic(OrCommand);
+          break;
+        case "<":
+          await this.writer.writeArithmetic(LtCommand);
+          break;
+        case ">":
+          await this.writer.writeArithmetic(GtCommand);
+          break;
+        case "=":
+          await this.writer.writeArithmetic(EqCommand);
+          break;
+        default:
+          break;
+      }
     }
-    this.depth -= 1;
-    this.write("</expression>");
   }
 
   /**
@@ -318,22 +377,55 @@ class CompilationEngine {
    * should not be advanced over.
    */
   async compileTerm(): Promise<void> {
-    this.write("<term>");
-    this.depth += 1;
-    if (this.peekToken().value === "(") {
+    // TODO: handle identifiers
+    const nextToken = this.peekToken();
+    if (nextToken.value === "(") {
       // (expression)
       this.eat("(");
       await this.compileExpression();
       this.eat(")");
-    } else if (
-      this.peekToken().value === "-" ||
-      this.peekToken().value === "~"
-    ) {
+    } else if (nextToken.value === "-" || nextToken.value === "~") {
       // unaryOp term
-      this.eat(this.peekToken().value);
+      this.eat(nextToken.value);
       await this.compileTerm();
+      if (nextToken.value === "-") {
+        await this.writer.writeArithmetic(NegCommand);
+      } else {
+        await this.writer.writeArithmetic(NotCommand);
+      }
     } else {
-      this.eat(this.peekToken().value);
+      if (nextToken.kind === TokenKindIdentifier) {
+        if (this.subrutineSymbolTable.kindOf(nextToken.value)) {
+          const kind = this.subrutineSymbolTable.kindOf(nextToken.value);
+          const index = this.subrutineSymbolTable.indexOf(nextToken.value);
+          if (kind === SymbolKindArg) {
+            // arg
+            await this.writer.writePush(ArgumentSegment, index);
+          } else {
+            // var
+            await this.writer.writePush(LocalSegment, index);
+          }
+        } else if (this.classSymbolTable.kindOf(nextToken.value)) {
+          const kind = this.classSymbolTable.kindOf(nextToken.value);
+          const index = this.classSymbolTable.indexOf(nextToken.value);
+          if (kind === SymbolKindStatic) {
+            // static
+            await this.writer.writePush(StaticSegment, index);
+          } else {
+            // field
+            await this.writer.writePush(ThisSegment, index);
+          }
+        } else {
+          throw new Error(
+            `Parser error at line ${nextToken.position.line}: undefined variable ${nextToken.value}`
+          );
+        }
+      } else if (nextToken.kind === TokenKindIntegerConstant) {
+        this.writer.writePush(ConstantSegment, Number(nextToken.value));
+      } else if (nextToken.kind === TokenKindStringConstant) {
+        // TODO: handle string constants
+      }
+      this.eat(nextToken.value);
       if (this.peekToken().value === "[") {
         this.eat("[");
         await this.compileExpression();
@@ -350,8 +442,6 @@ class CompilationEngine {
         this.eat(")");
       }
     }
-    this.depth -= 1;
-    this.write("</term>");
   }
 
   /**

@@ -1,13 +1,13 @@
 import { WriteCloser } from "./types.ts";
 
-const ConstantSegment = "constant";
-const ArgumentSegment = "argument";
-const LocalSegment = "local";
-const StaticSegment = "static";
-const ThisSegment = "this";
-const ThatSegment = "that";
-const PointerSegment = "pointer";
-const TempSegment = "temp";
+export const ConstantSegment = "constant";
+export const ArgumentSegment = "argument";
+export const LocalSegment = "local";
+export const StaticSegment = "static";
+export const ThisSegment = "this";
+export const ThatSegment = "that";
+export const PointerSegment = "pointer";
+export const TempSegment = "temp";
 
 type PushSegmentType =
   | typeof ConstantSegment
@@ -28,18 +28,18 @@ type PopSegmentType =
   | typeof PointerSegment
   | typeof TempSegment;
 
-const AddCommnad = "add";
-const SubCommand = "sub";
-const NegCommand = "neg";
-const EqCommand = "eq";
-const GtCommand = "gt";
-const LtCommand = "lt";
-const AndCommand = "and";
-const OrCommand = "or";
-const NotCommand = "not";
+export const AddCommand = "add";
+export const SubCommand = "sub";
+export const NegCommand = "neg";
+export const EqCommand = "eq";
+export const GtCommand = "gt";
+export const LtCommand = "lt";
+export const AndCommand = "and";
+export const OrCommand = "or";
+export const NotCommand = "not";
 
 type VMCommandType =
-  | typeof AddCommnad
+  | typeof AddCommand
   | typeof SubCommand
   | typeof NegCommand
   | typeof EqCommand
@@ -58,64 +58,64 @@ class VMWriter {
   /**
    * Writes a VM push command.
    */
-  writePush(segment: PushSegmentType, index: number) {
-    this.output.write(`push ${segment} ${index}\n`);
+  async writePush(segment: PushSegmentType, index: number) {
+    await this.output.write(`push ${segment} ${index}\n`);
   }
 
   /**
    * Writes a VM pop command.
    */
-  writePop(segment: PopSegmentType, index: number) {
-    this.output.write(`pop ${segment} ${index}\n`);
+  async writePop(segment: PopSegmentType, index: number) {
+    await this.output.write(`pop ${segment} ${index}\n`);
   }
 
   /**
    * Writes a VM arithmetic-logical command.
    */
-  writeArithmetic(command: VMCommandType) {
-    this.output.write(`${command}\n`);
+  async writeArithmetic(command: VMCommandType) {
+    await this.output.write(`${command}\n`);
   }
 
   /**
    * Writes a VM label command.
    */
-  writeLabel(label: string) {
-    this.output.write(`label ${label}\n`);
+  async writeLabel(label: string) {
+    await this.output.write(`label ${label}\n`);
   }
 
   /**
    * Writes a VM goto command.
    */
-  writeGoto(label: string) {
-    this.output.write(`goto ${label}\n`);
+  async writeGoto(label: string) {
+    await this.output.write(`goto ${label}\n`);
   }
 
   /**
    * Writes a VM if-goto command.
    */
-  writeIf(label: string) {
-    this.output.write(`if-goto ${label}\n`);
+  async writeIf(label: string) {
+    await this.output.write(`if-goto ${label}\n`);
   }
 
   /**
    * Writes a VM call command.
    */
-  writeCall(name: string, nArgs: number) {
-    this.output.write(`call ${name} ${nArgs}\n`);
+  async writeCall(name: string, nArgs: number) {
+    await this.output.write(`call ${name} ${nArgs}\n`);
   }
 
   /**
    * Writes a VM function command.
    */
-  writeFunction(name: string, nVals: number) {
-    this.output.write(`function ${name} ${nVals}\n`);
+  async writeFunction(name: string, nVals: number) {
+    await this.output.write(`function ${name} ${nVals}\n`);
   }
 
   /**
    * Writes a VM return command.
    */
-  writeReturn() {
-    this.output.write(`return\n`);
+  async writeReturn() {
+    await this.output.write(`return\n`);
   }
 
   /**

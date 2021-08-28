@@ -61,24 +61,9 @@ async function analyze(inputPath?: string) {
           });
           break;
         case TokenKindSymbol: {
-          let symbol = "";
-          switch (tokenizer.symbol()) {
-            case "<":
-              symbol = "&lt;";
-              break;
-            case ">":
-              symbol = "&gt;";
-              break;
-            case "&":
-              symbol = "&amp;";
-              break;
-            default:
-              symbol = tokenizer.symbol();
-              break;
-          }
           tokens.push({
             kind: TokenKindSymbol,
-            value: symbol,
+            value: tokenizer.symbol(),
             position: tokenizer.tokenPosition(),
           });
           break;
