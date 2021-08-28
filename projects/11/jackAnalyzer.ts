@@ -10,6 +10,7 @@ import {
   TokenKindIntegerConstant,
   TokenKindStringConstant,
 } from "./types.ts";
+import VMWriter from "./vmWriter.ts";
 
 const encoder = new TextEncoder();
 
@@ -115,17 +116,19 @@ async function analyze(inputPath?: string) {
     //   write: true,
     //   truncate: true,
     // });
-    const writer = {
+    const writeCloser = {
       write: async (str: string): Promise<void> => {
         // await file.write(encoder.encode(str));
         console.log(str);
       },
+      close: async (): Promise<void> => {},
     };
-    const parser = new CompilationEngine(tokens, writer);
+    const vmWriter = new VMWriter(writeCloser);
+    const parser = new CompilationEngine(tokens, vmWriter);
     try {
       await parser.compileClass();
     } finally {
-      // file.close();
+      vmWriter.close();
     }
   }
 }

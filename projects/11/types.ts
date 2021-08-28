@@ -79,3 +79,8 @@ export const Operators = [
   "&gt;",
   "=",
 ];
+
+export type WriteCloser = {
+  write(text: string): Promise<void>;
+  close(): Promise<void>;
+};

@@ -1,14 +1,11 @@
-import { Operators, TokenType } from "./types.ts";
-
-export type Writer = {
-  write(text: string): Promise<void>;
-};
+import { Operators, TokenType, WriteCloser } from "./types.ts";
+import VMWriter from "./vmWriter.ts";
 
 class CompilationEngine {
   tokens: TokenType[];
-  writer: Writer;
+  writer: VMWriter;
   depth = 0;
-  constructor(tokens: TokenType[], writer: Writer) {
+  constructor(tokens: TokenType[], writer: VMWriter) {
     this.tokens = tokens;
     this.writer = writer;
   }
@@ -31,7 +28,8 @@ class CompilationEngine {
   }
 
   private async write(text: string): Promise<void> {
-    await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
+    // await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
+    console.log(`${" ".repeat(this.depth * 2)}${text}`);
   }
 
   private peekToken(i = 0): TokenType {
