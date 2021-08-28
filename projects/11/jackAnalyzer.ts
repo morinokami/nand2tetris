@@ -53,7 +53,11 @@ async function analyze(inputPath?: string) {
       const tokenType = tokenizer.tokenType();
       switch (tokenType) {
         case TokenKindKeyword:
-          tokens.push({ kind: "keyword", value: tokenizer.keyword() });
+          tokens.push({
+            kind: TokenKindKeyword,
+            value: tokenizer.keyword(),
+            position: tokenizer.tokenPosition(),
+          });
           break;
         case TokenKindSymbol: {
           let symbol = "";
@@ -71,20 +75,33 @@ async function analyze(inputPath?: string) {
               symbol = tokenizer.symbol();
               break;
           }
-          tokens.push({ kind: "symbol", value: symbol });
+          tokens.push({
+            kind: TokenKindSymbol,
+            value: symbol,
+            position: tokenizer.tokenPosition(),
+          });
           break;
         }
         case TokenKindIdentifier:
-          tokens.push({ kind: "identifier", value: tokenizer.identifier() });
+          tokens.push({
+            kind: TokenKindIdentifier,
+            value: tokenizer.identifier(),
+            position: tokenizer.tokenPosition(),
+          });
           break;
         case TokenKindIntegerConstant:
           tokens.push({
-            kind: "integerConstant",
+            kind: TokenKindIntegerConstant,
             value: String(tokenizer.intVal()),
+            position: tokenizer.tokenPosition(),
           });
           break;
         case TokenKindStringConstant:
-          tokens.push({ kind: "stringConstant", value: tokenizer.stringVal() });
+          tokens.push({
+            kind: TokenKindStringConstant,
+            value: tokenizer.stringVal(),
+            position: tokenizer.tokenPosition(),
+          });
           break;
         default:
           throw new Error(`Unexpected token type: ${tokenType}`);

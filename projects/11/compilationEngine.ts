@@ -18,15 +18,15 @@ class CompilationEngine {
     if (
       currentToken?.value === tokenVal ||
       // identifier
-      (tokenVal === "identifier" &&
-        currentToken &&
-        currentToken.kind === tokenVal)
+      (tokenVal === "identifier" && currentToken?.kind === tokenVal)
     ) {
       this.write(
         `<${currentToken.kind}> ${currentToken.value} </${currentToken.kind}>`
       );
     } else {
-      throw new Error(`Expected ${tokenVal}`);
+      throw new Error(
+        `Parser error at line ${currentToken?.position.line}: exptected=\`${tokenVal}\`, got=\`${currentToken?.value}\``
+      );
     }
   }
 
@@ -191,7 +191,11 @@ class CompilationEngine {
           await this.compileReturn();
           break;
         default:
-          throw new Error(`Unexpected token ${this.peekToken().value}`);
+          throw new Error(
+            `Parser error at line ${
+              this.peekToken().position.line
+            }: unexpected token ${this.peekToken().value}`
+          );
       }
     }
     this.depth -= 1;

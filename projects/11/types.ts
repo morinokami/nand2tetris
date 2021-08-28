@@ -9,10 +9,15 @@ export type TokenKindType =
   | typeof TokenKindIdentifier
   | typeof TokenKindIntegerConstant
   | typeof TokenKindStringConstant;
-
+export type TokenPositionType = {
+  position: number;
+  line: number;
+  column: number;
+};
 export type TokenType = {
   kind: TokenKindType;
   value: string;
+  position: TokenPositionType;
 };
 
 export const Keywords = [

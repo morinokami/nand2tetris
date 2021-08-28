@@ -5,6 +5,7 @@ import {
   TokenKindIntegerConstant,
   TokenKindStringConstant,
   TokenKindType,
+  TokenPositionType,
   Keywords,
   KeywordType,
   Symbols,
@@ -15,6 +16,13 @@ class JackTokenizer {
   private source: string;
   private position = 0;
   private readPosition = 0;
+  private line = 0;
+  private column = 0;
+  private tokenHeadPosition: TokenPositionType = {
+    position: this.position,
+    line: this.line,
+    column: this.column,
+  };
   private ch = "";
   private token = "";
   constructor(source: string) {
@@ -68,6 +76,12 @@ class JackTokenizer {
   }
 
   private readChar(): void {
+    if (this.ch === "\n") {
+      this.line++;
+      this.column = 0;
+    } else {
+      this.column++;
+    }
     if (this.readPosition >= this.source.length) {
       this.ch = "";
     } else {
@@ -106,6 +120,11 @@ class JackTokenizer {
    */
   advance(): void {
     const start = this.position;
+    this.tokenHeadPosition = {
+      position: start,
+      line: this.line + 1,
+      column: this.column + 1,
+    };
     if ((Symbols as unknown as string[]).includes(this.ch)) {
       this.token = this.ch;
       this.readChar();
@@ -181,6 +200,13 @@ class JackTokenizer {
    */
   stringVal(): string {
     return this.token.substring(1, this.token.length - 1);
+  }
+
+  /**
+   * Returns the position of the current token.
+   */
+  tokenPosition(): TokenPositionType {
+    return this.tokenHeadPosition;
   }
 }
 
