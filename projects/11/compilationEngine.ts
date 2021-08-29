@@ -316,15 +316,12 @@ class CompilationEngine {
    * Compiles a return statement.
    */
   async compileReturn(): Promise<void> {
-    this.write("<returnStatement>");
-    this.depth += 1;
     this.eat("return");
     if (this.peekToken().value !== ";") {
       await this.compileExpression();
     }
     this.eat(";");
-    this.depth -= 1;
-    this.write("</returnStatement>");
+    this.writer.writeReturn();
   }
 
   /**
