@@ -72,5 +72,5 @@ export const Operators = ["+", "-", "*", "/", "&", "|", "<", ">", "="];
 
 export type WriteCloser = {
   write(text: string): Promise<void>;
-  close(): Promise<void>;
+  close(): void;
 };
