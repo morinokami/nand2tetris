@@ -68,14 +68,9 @@ export const Symbols = [
 export type KeywordType = typeof Keywords[number];
 export type SymbolType = typeof Symbols[number];
 
-export const Operators = [
-  "+",
-  "-",
-  "*",
-  "/",
-  "&amp;",
-  "|",
-  "&lt;",
-  "&gt;",
-  "=",
-];
+export const Operators = ["+", "-", "*", "/", "&", "|", "<", ">", "="];
+
+export type WriteCloser = {
+  write(text: string): Promise<void>;
+  close(): void;
+};

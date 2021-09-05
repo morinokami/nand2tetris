@@ -10,6 +10,7 @@ import {
   TokenKindIntegerConstant,
   TokenKindStringConstant,
 } from "./types.ts";
+import VMWriter from "./vmWriter.ts";
 
 const encoder = new TextEncoder();
 
@@ -60,24 +61,9 @@ async function analyze(inputPath?: string) {
           });
           break;
         case TokenKindSymbol: {
-          let symbol = "";
-          switch (tokenizer.symbol()) {
-            case "<":
-              symbol = "&lt;";
-              break;
-            case ">":
-              symbol = "&gt;";
-              break;
-            case "&":
-              symbol = "&amp;";
-              break;
-            default:
-              symbol = tokenizer.symbol();
-              break;
-          }
           tokens.push({
             kind: TokenKindSymbol,
-            value: symbol,
+            value: tokenizer.symbol(),
             position: tokenizer.tokenPosition(),
           });
           break;
@@ -109,23 +95,27 @@ async function analyze(inputPath?: string) {
     }
 
     // Parse and compile
-    // const outputPath = path.join(outputDir, `${jackFile.name}.xml`);
-    // const file = await Deno.open(outputPath, {
-    //   create: true,
-    //   write: true,
-    //   truncate: true,
-    // });
-    const writer = {
+    const outputPath = path.join(outputDir, `${jackFile.name}.vm`);
+    const file = await Deno.open(outputPath, {
+      create: true,
+      write: true,
+      truncate: true,
+    });
+    const writeCloser = {
       write: async (str: string): Promise<void> => {
-        // await file.write(encoder.encode(str));
-        console.log(str);
+        await file.write(encoder.encode(str));
+        // console.log(str);
+      },
+      close: (): void => {
+        file.close();
       },
     };
-    const parser = new CompilationEngine(tokens, writer);
+    const vmWriter = new VMWriter(writeCloser);
+    const parser = new CompilationEngine(tokens, vmWriter);
     try {
       await parser.compileClass();
     } finally {
-      // file.close();
+      vmWriter.close();
     }
   }
 }
