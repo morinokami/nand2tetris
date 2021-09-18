@@ -230,39 +230,25 @@ class CompilationEngine {
     const line = this.peekToken().position.line;
     const name = this.eat("identifier");
     if (this.peekToken().value === "[") {
-      // TODO: array
+      // TODO: define pushIdentifier
+      await this.pushPopIdentifier("push", name, line);
       this.eat("[");
       await this.compileExpression();
       this.eat("]");
+      await this.writer.writeArithmetic("add");
+      this.eat("=");
+      await this.compileExpression();
+      this.eat(";");
+      await this.writer.writePop(TempSegment, 0);
+      await this.writer.writePop(PointerSegment, 1);
+      await this.writer.writePush(TempSegment, 0);
+      await this.writer.writePop(ThatSegment, 0);
+      return;
     }
     this.eat("=");
     await this.compileExpression();
     this.eat(";");
-    if (this.subrutineSymbolTable.kindOf(name) !== SymbolKindNone) {
-      const kind = this.subrutineSymbolTable.kindOf(name);
-      const index = this.subrutineSymbolTable.indexOf(name);
-      if (kind === SymbolKindArg) {
-        // arg
-        await this.writer.writePop(ArgumentSegment, index);
-      } else {
-        // var
-        await this.writer.writePop(LocalSegment, index);
-      }
-    } else if (this.classSymbolTable.kindOf(name) !== SymbolKindNone) {
-      const kind = this.classSymbolTable.kindOf(name);
-      const index = this.classSymbolTable.indexOf(name);
-      if (kind === SymbolKindStatic) {
-        // static
-        await this.writer.writePop(StaticSegment, index);
-      } else {
-        // field
-        await this.writer.writePop(ThisSegment, index);
-      }
-    } else {
-      throw new Error(
-        `Parser error at line ${line}: identifier ${name} is not defined`
-      );
-    }
+    await this.pushPopIdentifier("pop", name, line);
   }
 
   /**
@@ -463,10 +449,13 @@ class CompilationEngine {
       } else if (nextToken.kind === TokenKindIdentifier) {
         const name0 = this.eat(nextToken.value);
         if (this.peekToken().value === "[") {
-          // TODO: array
+          await this.pushPopIdentifier("push", name0, nextToken.position.line);
           this.eat("[");
           await this.compileExpression();
           this.eat("]");
+          await this.writer.writeArithmetic(AddCommand);
+          await this.writer.writePop(PointerSegment, 1);
+          await this.writer.writePush(ThatSegment, 0);
         } else if (this.peekToken().value === "(") {
           this.eat("(");
           const nArgs = await this.compileExpressionList();
@@ -480,40 +469,18 @@ class CompilationEngine {
           this.eat(")");
           this.writer.writeCall(`${name0}.${name1}`, nArgs);
         } else {
-          const token = nextToken;
-          if (
-            this.subrutineSymbolTable.kindOf(token.value) !== SymbolKindNone
-          ) {
-            const kind = this.subrutineSymbolTable.kindOf(token.value);
-            const index = this.subrutineSymbolTable.indexOf(token.value);
-            if (kind === SymbolKindArg) {
-              // arg
-              await this.writer.writePush(ArgumentSegment, index);
-            } else {
-              // var
-              await this.writer.writePush(LocalSegment, index);
-            }
-          } else if (this.classSymbolTable.kindOf(token.value)) {
-            const kind = this.classSymbolTable.kindOf(token.value);
-            const index = this.classSymbolTable.indexOf(token.value);
-            if (kind === SymbolKindStatic) {
-              // static
-              await this.writer.writePush(StaticSegment, index);
-            } else {
-              // field
-              await this.writer.writePush(ThisSegment, index);
-            }
-          } else {
-            throw new Error(
-              `Parser error at line ${token.position.line}: identifier ${token.value} is not defined`
-            );
-          }
+          await this.pushPopIdentifier("push", name0, nextToken.position.line);
         }
       } else if (nextToken.kind === TokenKindIntegerConstant) {
         await this.writer.writePush(ConstantSegment, Number(nextToken.value));
         this.eat(nextToken.value);
       } else if (nextToken.kind === TokenKindStringConstant) {
-        // TODO: handle string constants
+        this.writer.writePush(ConstantSegment, nextToken.value.length);
+        await this.writer.writeCall("String.new", 1);
+        for (const char of nextToken.value) {
+          await this.writer.writePush(ConstantSegment, char.charCodeAt(0));
+          await this.writer.writeCall("String.appendChar", 2);
+        }
         this.eat(nextToken.value);
       }
     }
@@ -535,6 +502,54 @@ class CompilationEngine {
       }
     }
     return count;
+  }
+
+  async pushPopIdentifier(
+    operation: "push" | "pop",
+    name: string,
+    line: number
+  ): Promise<void> {
+    if (this.subrutineSymbolTable.kindOf(name) !== SymbolKindNone) {
+      const kind = this.subrutineSymbolTable.kindOf(name);
+      const index = this.subrutineSymbolTable.indexOf(name);
+      if (kind === SymbolKindArg) {
+        // arg
+        if (operation === "push") {
+          await this.writer.writePush(ArgumentSegment, index);
+        } else {
+          await this.writer.writePop(ArgumentSegment, index);
+        }
+      } else {
+        // var
+        if (operation === "push") {
+          await this.writer.writePush(LocalSegment, index);
+        } else {
+          await this.writer.writePop(LocalSegment, index);
+        }
+      }
+    } else if (this.classSymbolTable.kindOf(name) !== SymbolKindNone) {
+      const kind = this.classSymbolTable.kindOf(name);
+      const index = this.classSymbolTable.indexOf(name);
+      if (kind === SymbolKindStatic) {
+        // static
+        if (operation === "push") {
+          await this.writer.writePush(StaticSegment, index);
+        } else {
+          await this.writer.writePop(StaticSegment, index);
+        }
+      } else {
+        // field
+        if (operation === "push") {
+          await this.writer.writePush(ThisSegment, index);
+        } else {
+          await this.writer.writePop(ThisSegment, index);
+        }
+      }
+    } else {
+      throw new Error(
+        `Parser error at line ${line}: identifier ${name} is not defined`
+      );
+    }
   }
 }
 
