@@ -104,7 +104,6 @@ async function analyze(inputPath?: string) {
     const writeCloser = {
       write: async (str: string): Promise<void> => {
         await file.write(encoder.encode(str));
-        // console.log(str);
       },
       close: (): void => {
         file.close();

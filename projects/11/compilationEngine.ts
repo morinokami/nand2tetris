@@ -1,5 +1,6 @@
 import SymbolTable, {
   SymbolKindArg,
+  SymbolKindField,
   SymbolKindNone,
   SymbolKindStatic,
   SymbolKindType,
@@ -41,7 +42,6 @@ class CompilationEngine {
   subrutineSymbolTable = new SymbolTable();
   ifCounter = 0;
   whileCounter = 0;
-  depth = 0; // TODO: Delete this
   constructor(tokens: TokenType[], writer: VMWriter) {
     this.tokens = tokens;
     this.writer = writer;
@@ -53,7 +53,6 @@ class CompilationEngine {
       !(
         currentToken?.value === tokenVal ||
         // identifier
-        // TODO: DELETE?
         (tokenVal === "identifier" && currentToken?.kind === tokenVal)
       )
     ) {
@@ -62,12 +61,6 @@ class CompilationEngine {
       );
     }
     return currentToken.value;
-  }
-
-  // TODO: Delete this
-  private async write(text: string): Promise<void> {
-    // await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
-    console.log(`${" ".repeat(this.depth * 2)}${text}`);
   }
 
   private peekToken(i = 0): TokenType {
@@ -133,10 +126,21 @@ class CompilationEngine {
     while (this.peekToken().value === "var") {
       this.compileVarDec();
     }
-    this.writer.writeFunction(
+    await this.writer.writeFunction(
       `${this.className}.${name}`,
       this.subrutineSymbolTable.varCount(SymbolKindVar)
     );
+    if (subroutine === "constructor") {
+      await this.writer.writePush(
+        "constant",
+        this.classSymbolTable.varCount(SymbolKindField)
+      );
+      await this.writer.writeCall("Memory.alloc", 1);
+      await this.writer.writePop(PointerSegment, 0);
+    } else if (subroutine === "method") {
+      this.writer.writePush(ArgumentSegment, 0);
+      this.writer.writePop(PointerSegment, 0);
+    }
     await this.compileSubroutineBody();
     this.eat("}");
   }
@@ -222,39 +226,24 @@ class CompilationEngine {
     const line = this.peekToken().position.line;
     const name = this.eat("identifier");
     if (this.peekToken().value === "[") {
-      // TODO: array
       this.eat("[");
       await this.compileExpression();
       this.eat("]");
+      await this.pushPopIdentifier("push", name, line);
+      await this.writer.writeArithmetic("add");
+      this.eat("=");
+      await this.compileExpression();
+      this.eat(";");
+      await this.writer.writePop(TempSegment, 0);
+      await this.writer.writePop(PointerSegment, 1);
+      await this.writer.writePush(TempSegment, 0);
+      await this.writer.writePop(ThatSegment, 0);
+      return;
     }
     this.eat("=");
     await this.compileExpression();
     this.eat(";");
-    if (this.subrutineSymbolTable.kindOf(name) !== SymbolKindNone) {
-      const kind = this.subrutineSymbolTable.kindOf(name);
-      const index = this.subrutineSymbolTable.indexOf(name);
-      if (kind === SymbolKindArg) {
-        // arg
-        await this.writer.writePop(ArgumentSegment, index);
-      } else {
-        // var
-        await this.writer.writePop(LocalSegment, index);
-      }
-    } else if (this.classSymbolTable.kindOf(name) !== SymbolKindNone) {
-      const kind = this.classSymbolTable.kindOf(name);
-      const index = this.classSymbolTable.indexOf(name);
-      if (kind === SymbolKindStatic) {
-        // static
-        await this.writer.writePop(StaticSegment, index);
-      } else {
-        // field
-        await this.writer.writePop(ThisSegment, index);
-      }
-    } else {
-      throw new Error(
-        `Parser error at line ${line}: identifier ${name} is not defined`
-      );
-    }
+    await this.pushPopIdentifier("pop", name, line);
   }
 
   /**
@@ -309,17 +298,59 @@ class CompilationEngine {
    */
   async compileDo(): Promise<void> {
     this.eat("do");
-    let func = this.eat("identifier");
+    const ident0 = this.eat("identifier");
     if (this.peekToken().value === ".") {
       this.eat(".");
-      const mehtod = this.eat("identifier");
-      func = `${func}.${mehtod}`;
+      const ident1 = this.eat("identifier");
+      let className = "";
+      let kind = "";
+      let index = 0;
+      if (this.classSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+        className = this.classSymbolTable.typeOf(ident0);
+        kind = this.classSymbolTable.kindOf(ident0);
+        index = this.classSymbolTable.indexOf(ident0);
+      } else if (this.subrutineSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+        className = this.subrutineSymbolTable.typeOf(ident0);
+        kind = this.subrutineSymbolTable.kindOf(ident0);
+        index = this.subrutineSymbolTable.indexOf(ident0);
+      } else {
+        className = ident0;
+      }
+      if (className !== ident0) {
+        switch (kind) {
+          case SymbolKindArg:
+            await this.writer.writePush(ArgumentSegment, index);
+            break;
+          case SymbolKindVar:
+            await this.writer.writePush(LocalSegment, index);
+            break;
+          case SymbolKindField:
+            await this.writer.writePush(ThisSegment, index);
+            break;
+          case SymbolKindStatic:
+            // TODO:
+            throw new Error("static not implemented");
+        }
+        this.eat("(");
+        const nArgs = await this.compileExpressionList();
+        this.eat(")");
+        this.eat(";");
+        await this.writer.writeCall(`${className}.${ident1}`, nArgs + 1);
+      } else {
+        this.eat("(");
+        const nArgs = await this.compileExpressionList();
+        this.eat(")");
+        this.eat(";");
+        await this.writer.writeCall(`${ident0}.${ident1}`, nArgs);
+      }
+    } else {
+      await this.writer.writePush(PointerSegment, 0);
+      this.eat("(");
+      const nArgs = await this.compileExpressionList();
+      this.eat(")");
+      this.eat(";");
+      await this.writer.writeCall(`${this.className}.${ident0}`, nArgs + 1);
     }
-    this.eat("(");
-    const nArgs = await this.compileExpressionList();
-    this.eat(")");
-    this.eat(";");
-    await this.writer.writeCall(func, nArgs);
     await this.writer.writePop(TempSegment, 0);
   }
 
@@ -414,59 +445,77 @@ class CompilationEngine {
         }
         this.eat(nextToken.value);
       } else if (nextToken.kind === TokenKindIdentifier) {
-        const name0 = this.eat(nextToken.value);
+        const ident0 = this.eat(nextToken.value);
         if (this.peekToken().value === "[") {
-          // TODO: array
           this.eat("[");
           await this.compileExpression();
           this.eat("]");
+          await this.pushPopIdentifier("push", ident0, nextToken.position.line);
+          await this.writer.writeArithmetic(AddCommand);
+          await this.writer.writePop(PointerSegment, 1);
+          await this.writer.writePush(ThatSegment, 0);
         } else if (this.peekToken().value === "(") {
           this.eat("(");
           const nArgs = await this.compileExpressionList();
           this.eat(")");
-          this.writer.writeCall(name0, nArgs);
+          this.writer.writeCall(ident0, nArgs);
         } else if (this.peekToken().value === ".") {
           this.eat(".");
-          const name1 = this.eat("identifier");
-          this.eat("(");
-          const nArgs = await this.compileExpressionList();
-          this.eat(")");
-          this.writer.writeCall(`${name0}.${name1}`, nArgs);
-        } else {
-          const token = nextToken;
-          if (
-            this.subrutineSymbolTable.kindOf(token.value) !== SymbolKindNone
+          const ident1 = this.eat("identifier");
+          let className = "";
+          let kind = "";
+          let index = 0;
+          if (this.classSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+            className = this.classSymbolTable.typeOf(ident0);
+            kind = this.classSymbolTable.kindOf(ident0);
+            index = this.classSymbolTable.indexOf(ident0);
+          } else if (
+            this.subrutineSymbolTable.kindOf(ident0) !== SymbolKindNone
           ) {
-            const kind = this.subrutineSymbolTable.kindOf(token.value);
-            const index = this.subrutineSymbolTable.indexOf(token.value);
-            if (kind === SymbolKindArg) {
-              // arg
-              await this.writer.writePush(ArgumentSegment, index);
-            } else {
-              // var
-              await this.writer.writePush(LocalSegment, index);
-            }
-          } else if (this.classSymbolTable.kindOf(token.value)) {
-            const kind = this.classSymbolTable.kindOf(token.value);
-            const index = this.classSymbolTable.indexOf(token.value);
-            if (kind === SymbolKindStatic) {
-              // static
-              await this.writer.writePush(StaticSegment, index);
-            } else {
-              // field
-              await this.writer.writePush(ThisSegment, index);
-            }
+            className = this.subrutineSymbolTable.typeOf(ident0);
+            kind = this.subrutineSymbolTable.kindOf(ident0);
+            index = this.subrutineSymbolTable.indexOf(ident0);
           } else {
-            throw new Error(
-              `Parser error at line ${token.position.line}: identifier ${token.value} is not defined`
-            );
+            className = ident0;
           }
+          if (className !== ident0) {
+            switch (kind) {
+              case SymbolKindArg:
+                await this.writer.writePush(ArgumentSegment, index);
+                break;
+              case SymbolKindVar:
+                await this.writer.writePush(LocalSegment, index);
+                break;
+              case SymbolKindField:
+                await this.writer.writePush(ThisSegment, index);
+                break;
+              case SymbolKindStatic:
+                // TODO:
+                throw new Error("static not implemented");
+            }
+            this.eat("(");
+            const nArgs = await this.compileExpressionList();
+            this.eat(")");
+            await this.writer.writeCall(`${className}.${ident1}`, nArgs + 1);
+          } else {
+            this.eat("(");
+            const nArgs = await this.compileExpressionList();
+            this.eat(")");
+            await this.writer.writeCall(`${ident0}.${ident1}`, nArgs);
+          }
+        } else {
+          await this.pushPopIdentifier("push", ident0, nextToken.position.line);
         }
       } else if (nextToken.kind === TokenKindIntegerConstant) {
         await this.writer.writePush(ConstantSegment, Number(nextToken.value));
         this.eat(nextToken.value);
       } else if (nextToken.kind === TokenKindStringConstant) {
-        // TODO: handle string constants
+        this.writer.writePush(ConstantSegment, nextToken.value.length);
+        await this.writer.writeCall("String.new", 1);
+        for (const char of nextToken.value) {
+          await this.writer.writePush(ConstantSegment, char.charCodeAt(0));
+          await this.writer.writeCall("String.appendChar", 2);
+        }
         this.eat(nextToken.value);
       }
     }
@@ -488,6 +537,54 @@ class CompilationEngine {
       }
     }
     return count;
+  }
+
+  async pushPopIdentifier(
+    operation: "push" | "pop",
+    name: string,
+    line: number
+  ): Promise<void> {
+    if (this.subrutineSymbolTable.kindOf(name) !== SymbolKindNone) {
+      const kind = this.subrutineSymbolTable.kindOf(name);
+      const index = this.subrutineSymbolTable.indexOf(name);
+      if (kind === SymbolKindArg) {
+        // arg
+        if (operation === "push") {
+          await this.writer.writePush(ArgumentSegment, index);
+        } else {
+          await this.writer.writePop(ArgumentSegment, index);
+        }
+      } else {
+        // var
+        if (operation === "push") {
+          await this.writer.writePush(LocalSegment, index);
+        } else {
+          await this.writer.writePop(LocalSegment, index);
+        }
+      }
+    } else if (this.classSymbolTable.kindOf(name) !== SymbolKindNone) {
+      const kind = this.classSymbolTable.kindOf(name);
+      const index = this.classSymbolTable.indexOf(name);
+      if (kind === SymbolKindStatic) {
+        // static
+        if (operation === "push") {
+          await this.writer.writePush(StaticSegment, index);
+        } else {
+          await this.writer.writePop(StaticSegment, index);
+        }
+      } else {
+        // field
+        if (operation === "push") {
+          await this.writer.writePush(ThisSegment, index);
+        } else {
+          await this.writer.writePop(ThisSegment, index);
+        }
+      }
+    } else {
+      throw new Error(
+        `Parser error at line ${line}: identifier ${name} is not defined`
+      );
+    }
   }
 }
 
