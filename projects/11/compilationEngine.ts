@@ -53,7 +53,6 @@ class CompilationEngine {
       !(
         currentToken?.value === tokenVal ||
         // identifier
-        // TODO: DELETE?
         (tokenVal === "identifier" && currentToken?.kind === tokenVal)
       )
     ) {
@@ -139,11 +138,8 @@ class CompilationEngine {
       await this.writer.writeCall("Memory.alloc", 1);
       await this.writer.writePop(PointerSegment, 0);
     } else if (subroutine === "method") {
-      // push argument 0
       this.writer.writePush(ArgumentSegment, 0);
-      // pop pointer 0
       this.writer.writePop(PointerSegment, 0);
-      // TODO: OK???
     }
     await this.compileSubroutineBody();
     this.eat("}");
@@ -230,11 +226,10 @@ class CompilationEngine {
     const line = this.peekToken().position.line;
     const name = this.eat("identifier");
     if (this.peekToken().value === "[") {
-      // TODO: define pushIdentifier
-      await this.pushPopIdentifier("push", name, line);
       this.eat("[");
       await this.compileExpression();
       this.eat("]");
+      await this.pushPopIdentifier("push", name, line);
       await this.writer.writeArithmetic("add");
       this.eat("=");
       await this.compileExpression();
@@ -321,10 +316,6 @@ class CompilationEngine {
       } else {
         className = ident0;
       }
-      this.eat("(");
-      const nArgs = await this.compileExpressionList();
-      this.eat(")");
-      this.eat(";");
       if (className !== ident0) {
         switch (kind) {
           case SymbolKindArg:
@@ -340,18 +331,25 @@ class CompilationEngine {
             // TODO:
             throw new Error("static not implemented");
         }
+        this.eat("(");
+        const nArgs = await this.compileExpressionList();
+        this.eat(")");
+        this.eat(";");
         await this.writer.writeCall(`${className}.${ident1}`, nArgs + 1);
       } else {
+        this.eat("(");
+        const nArgs = await this.compileExpressionList();
+        this.eat(")");
+        this.eat(";");
         await this.writer.writeCall(`${ident0}.${ident1}`, nArgs);
       }
     } else {
+      await this.writer.writePush(PointerSegment, 0);
       this.eat("(");
       const nArgs = await this.compileExpressionList();
       this.eat(")");
       this.eat(";");
-      const className = this.className; // this.subrutineSymbolTable.typeOf("this");
-      await this.writer.writePush(PointerSegment, 0);
-      await this.writer.writeCall(`${className}.${ident0}`, nArgs + 1);
+      await this.writer.writeCall(`${this.className}.${ident0}`, nArgs + 1);
     }
     await this.writer.writePop(TempSegment, 0);
   }
@@ -447,12 +445,12 @@ class CompilationEngine {
         }
         this.eat(nextToken.value);
       } else if (nextToken.kind === TokenKindIdentifier) {
-        const name0 = this.eat(nextToken.value);
+        const ident0 = this.eat(nextToken.value);
         if (this.peekToken().value === "[") {
-          await this.pushPopIdentifier("push", name0, nextToken.position.line);
           this.eat("[");
           await this.compileExpression();
           this.eat("]");
+          await this.pushPopIdentifier("push", ident0, nextToken.position.line);
           await this.writer.writeArithmetic(AddCommand);
           await this.writer.writePop(PointerSegment, 1);
           await this.writer.writePush(ThatSegment, 0);
@@ -460,16 +458,53 @@ class CompilationEngine {
           this.eat("(");
           const nArgs = await this.compileExpressionList();
           this.eat(")");
-          this.writer.writeCall(name0, nArgs);
+          this.writer.writeCall(ident0, nArgs);
         } else if (this.peekToken().value === ".") {
           this.eat(".");
-          const name1 = this.eat("identifier");
-          this.eat("(");
-          const nArgs = await this.compileExpressionList();
-          this.eat(")");
-          this.writer.writeCall(`${name0}.${name1}`, nArgs);
+          const ident1 = this.eat("identifier");
+          let className = "";
+          let kind = "";
+          let index = 0;
+          if (this.classSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+            className = this.classSymbolTable.typeOf(ident0);
+            kind = this.classSymbolTable.kindOf(ident0);
+            index = this.classSymbolTable.indexOf(ident0);
+          } else if (
+            this.subrutineSymbolTable.kindOf(ident0) !== SymbolKindNone
+          ) {
+            className = this.subrutineSymbolTable.typeOf(ident0);
+            kind = this.subrutineSymbolTable.kindOf(ident0);
+            index = this.subrutineSymbolTable.indexOf(ident0);
+          } else {
+            className = ident0;
+          }
+          if (className !== ident0) {
+            switch (kind) {
+              case SymbolKindArg:
+                await this.writer.writePush(ArgumentSegment, index);
+                break;
+              case SymbolKindVar:
+                await this.writer.writePush(LocalSegment, index);
+                break;
+              case SymbolKindField:
+                await this.writer.writePush(ThisSegment, index);
+                break;
+              case SymbolKindStatic:
+                // TODO:
+                throw new Error("static not implemented");
+            }
+            this.eat("(");
+            const nArgs = await this.compileExpressionList();
+            this.eat(")");
+            await this.writer.writeCall(`${className}.${ident1}`, nArgs + 1);
+          } else {
+            this.eat("(");
+            const nArgs = await this.compileExpressionList();
+            this.eat(")");
+            await this.writer.writeCall(`${ident0}.${ident1}`, nArgs);
+          }
         } else {
-          await this.pushPopIdentifier("push", name0, nextToken.position.line);
+          await this.pushPopIdentifier("push", ident0, nextToken.position.line);
         }
       } else if (nextToken.kind === TokenKindIntegerConstant) {
         await this.writer.writePush(ConstantSegment, Number(nextToken.value));
