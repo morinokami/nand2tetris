@@ -1,5 +1,6 @@
 import SymbolTable, {
   SymbolKindArg,
+  SymbolKindField,
   SymbolKindNone,
   SymbolKindStatic,
   SymbolKindType,
@@ -41,7 +42,6 @@ class CompilationEngine {
   subrutineSymbolTable = new SymbolTable();
   ifCounter = 0;
   whileCounter = 0;
-  depth = 0; // TODO: Delete this
   constructor(tokens: TokenType[], writer: VMWriter) {
     this.tokens = tokens;
     this.writer = writer;
@@ -62,12 +62,6 @@ class CompilationEngine {
       );
     }
     return currentToken.value;
-  }
-
-  // TODO: Delete this
-  private async write(text: string): Promise<void> {
-    // await this.writer.write(`${" ".repeat(this.depth * 2)}${text}\n`);
-    console.log(`${" ".repeat(this.depth * 2)}${text}`);
   }
 
   private peekToken(i = 0): TokenType {
@@ -133,10 +127,24 @@ class CompilationEngine {
     while (this.peekToken().value === "var") {
       this.compileVarDec();
     }
-    this.writer.writeFunction(
+    await this.writer.writeFunction(
       `${this.className}.${name}`,
       this.subrutineSymbolTable.varCount(SymbolKindVar)
     );
+    if (subroutine === "constructor") {
+      await this.writer.writePush(
+        "constant",
+        this.classSymbolTable.varCount(SymbolKindField)
+      );
+      await this.writer.writeCall("Memory.alloc", 1);
+      await this.writer.writePop(PointerSegment, 0);
+    } else if (subroutine === "method") {
+      // push argument 0
+      this.writer.writePush(ArgumentSegment, 0);
+      // pop pointer 0
+      this.writer.writePop(PointerSegment, 0);
+      // TODO: OK???
+    }
     await this.compileSubroutineBody();
     this.eat("}");
   }
@@ -309,17 +317,56 @@ class CompilationEngine {
    */
   async compileDo(): Promise<void> {
     this.eat("do");
-    let func = this.eat("identifier");
+    const ident0 = this.eat("identifier");
     if (this.peekToken().value === ".") {
       this.eat(".");
-      const mehtod = this.eat("identifier");
-      func = `${func}.${mehtod}`;
+      const ident1 = this.eat("identifier");
+      let className = "";
+      let kind = "";
+      let index = 0;
+      if (this.classSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+        className = this.classSymbolTable.typeOf(ident0);
+        kind = this.classSymbolTable.kindOf(ident0);
+        index = this.classSymbolTable.indexOf(ident0);
+      } else if (this.subrutineSymbolTable.kindOf(ident0) !== SymbolKindNone) {
+        className = this.subrutineSymbolTable.typeOf(ident0);
+        kind = this.subrutineSymbolTable.kindOf(ident0);
+        index = this.subrutineSymbolTable.indexOf(ident0);
+      } else {
+        className = ident0;
+      }
+      this.eat("(");
+      const nArgs = await this.compileExpressionList();
+      this.eat(")");
+      this.eat(";");
+      if (className !== ident0) {
+        switch (kind) {
+          case SymbolKindArg:
+            await this.writer.writePush(ArgumentSegment, index);
+            break;
+          case SymbolKindVar:
+            await this.writer.writePush(LocalSegment, index);
+            break;
+          case SymbolKindField:
+            await this.writer.writePush(ThisSegment, index);
+            break;
+          case SymbolKindStatic:
+            // TODO:
+            throw new Error("static not implemented");
+        }
+        await this.writer.writeCall(`${className}.${ident1}`, nArgs + 1);
+      } else {
+        await this.writer.writeCall(`${ident0}.${ident1}`, nArgs);
+      }
+    } else {
+      this.eat("(");
+      const nArgs = await this.compileExpressionList();
+      this.eat(")");
+      this.eat(";");
+      const className = this.className; // this.subrutineSymbolTable.typeOf("this");
+      await this.writer.writePush(PointerSegment, 0);
+      await this.writer.writeCall(`${className}.${ident0}`, nArgs + 1);
     }
-    this.eat("(");
-    const nArgs = await this.compileExpressionList();
-    this.eat(")");
-    this.eat(";");
-    await this.writer.writeCall(func, nArgs);
     await this.writer.writePop(TempSegment, 0);
   }
 
