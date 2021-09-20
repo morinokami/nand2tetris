@@ -11,7 +11,7 @@ class Keyboard {
     /** Initializes the keyboard. */
     function void init() {
         return;
-    } 
+    }
 
     /**
      * Returns the character of the currently pressed key on the keyboard;
