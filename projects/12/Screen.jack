@@ -46,6 +46,7 @@ class Screen {
         let screen = 16384;
         while (i < 8192) {
             do Memory.poke(screen + i, 0);
+            let i = i + 1;
         }
 
         return;
