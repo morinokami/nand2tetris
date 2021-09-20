@@ -24,7 +24,7 @@ class Memory {
         let NEXT = 1;
         let freeList = heapBase;
         let freeList[SIZE] = heapSize;
-        let freeList[NEXT] = 0;
+        let freeList[NEXT] = null;
 
         return;
     }
@@ -44,12 +44,12 @@ class Memory {
         var Array currentBlock;
         var int currentSize;
 
-        if (freeList[NEXT] = 0) {
+        if (freeList[NEXT] = null) {
             return freeList;
         }
 
         let currentBlock = freeList;
-        while (~(currentBlock = 0)) {
+        while (~(currentBlock = null)) {
             let currentSize = currentBlock[SIZE];
             if (~(currentSize < size + 2)) {
                 return currentBlock;
@@ -79,12 +79,14 @@ class Memory {
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-        var Array currentBlock;
+        var Array currentBlock, newBlock;
 
         let currentBlock = freeList;
-        while (~(currentBlock = 0)) {
-            if (currentBlock[NEXT] = 0) {
-                let currentBlock[NEXT] = o - 1;
+        let newBlock = o - 1;
+        while (~(currentBlock = null)) {
+            if (currentBlock[NEXT] = null) {
+                let currentBlock[NEXT] = newBlock;
+                let newBlock[NEXT] = null;
                 return;
             }
             let currentBlock = currentBlock[NEXT];

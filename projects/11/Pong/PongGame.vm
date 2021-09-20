@@ -211,7 +211,6 @@ pop temp 0
 label IF_FALSE3
 push constant 0
 return
-
 function PongGame.moveBall 5
 push argument 0
 pop pointer 0
